@@ -288,18 +288,17 @@ def calc_climatology_season(month_start, month_end, dataset):
     :rtype: A tuple of two numpy arrays
     '''
 
-    data = dataset
     if month_start > month_end:
         # Offset the original array so that the the first month
         # becomes month_start, note that this cuts off the first year of data
         offset = slice(month_start - 1, month_start - 13)
-        reshape_data = reshape_monthly_to_annually(data[offset])
+        reshape_data = reshape_monthly_to_annually(dataset[offset])
         month_index = slice(0, 13 - month_start + month_end)
     else:
         # Since month_start <= month_end, just take a slice containing those months
-        reshape_data = reshape_monthly_to_annually(data)
+        reshape_data = reshape_monthly_to_annually(dataset)
         month_index = slice(month_start - 1, month_end)
-        
+
     t_series = reshape_data[:, month_index].mean(axis=1)
     means = t_series.mean(axis=0)
     return t_series, means
