@@ -298,7 +298,7 @@ def calc_climatology_season(month_start, month_end, dataset):
         # Since month_start <= month_end, just take a slice containing those months
         reshape_data = reshape_monthly_to_annually(dataset)
         month_index = slice(month_start - 1, month_end)
-    
+
     t_series = reshape_data[:, month_index].mean(axis=1)
     means = t_series.mean(axis=0)
     return t_series, means
