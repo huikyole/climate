@@ -58,7 +58,13 @@ def decode_time_values(dataset, time_var_name):
             arg[time_units] = time_val
             times.append(time_base + dt.timedelta(**arg))
     '''
-    times = num2date(time_data, units = time_format)
+    times_calendar = 'standard'
+    try:
+        times_calendar = time_data.calendar
+    except:
+        pass
+
+    times = num2date(time_data, units = time_format, calendar = times_calendar)
     return times
 
 def parse_time_units(time_format):
