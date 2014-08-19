@@ -72,7 +72,6 @@ class Downscaling:
         model_future = self.model_future
         model_future_corrected = np.zeros(model_future.size)
 
-        climate_shift = np.mean(model_future) - np.mean(model_present)
 
         for ival, model_value in enumerate(model_present):
             percentile = percentileofscore(model_present, model_value)
@@ -80,7 +79,7 @@ class Downscaling:
 
         for ival, model_value in enumerate(model_future):
             percentile = percentileofscore(model_future, model_value)
-            model_future_corrected[ival] = np.percentile(ref, percentile)+climate_shift 
+            model_future_corrected[ival] = model_value + np.percentile(ref, percentile) - np.percentile(model_present, percentile) 
 
         return model_present_corrected, model_future_corrected     
 
