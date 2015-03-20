@@ -164,12 +164,12 @@ class Dataset:
         lon_count = lons.shape[0]
         time_count = times.shape[0]
         
-        if lat_dim != 1:
-            err_msg = "Latitude Array should be 1 dimensional.  %s dimensions found." % lat_dim
-        elif lon_dim != 1:
-            err_msg = "Longitude Array should be 1 dimensional. %s dimensions found." % lon_dim
-        elif time_dim != 1:
-            err_msg = "Time Array should be 1 dimensional.  %s dimensions found." % time_dim
+        #if lat_dim != 1:
+        #    err_msg = "Latitude Array should be 1 dimensional.  %s dimensions found." % lat_dim
+        #elif lon_dim != 1:
+        #    err_msg = "Longitude Array should be 1 dimensional. %s dimensions found." % lon_dim
+        #elif time_dim != 1:
+        #    err_msg = "Time Array should be 1 dimensional.  %s dimensions found." % time_dim
         #elif value_dim != 3:
         #    err_msg = "Value Array should be 3 dimensional.  %s dimensions found." % value_dim
         # Finally check that the Values array conforms to the proper shape

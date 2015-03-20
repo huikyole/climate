@@ -308,8 +308,8 @@ def load_files(file_path,
              lats = lats[y_index, x_index]
              lons = lons[y_index, x_index]
     else:
-        y_index = np.arange(lats.shape[0]) 
-        x_index = np.arange(lons.shape[-1]) 
+        y_index = numpy.arange(lats.shape[0]) 
+        x_index = numpy.arange(lons.shape[-1]) 
 
     time_raw_values = netcdf.variables[time_name]
     for attr, value in time_raw_values.__dict__.iteritems():

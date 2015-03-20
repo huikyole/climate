@@ -1,0 +1,11 @@
+USA States
+
+A reference boundary overlay for US States. State FIPS Codes are also provided.
+
+Attributes:
+st: State Abbreviation - 
+SUB_REGION: Sub Region - 
+fips: State FIPS Code - 
+state: State Name - 
+
+exported on Fri Aug 22 17:18:35 -0400 2014

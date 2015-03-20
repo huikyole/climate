@@ -23,6 +23,7 @@ import numpy as np
 
 from mpl_toolkits.basemap import shiftgrid
 from dateutil.relativedelta import relativedelta
+from matplotlib.path import Path
 
 def decode_time_values(dataset, time_var_name):
     ''' Decode NetCDF time values into Python datetime objects.
@@ -215,6 +216,59 @@ def normalize_lat_lon_values(lats, lons, values):
 
     return lats_out, lons_out, data_out
 
+
+def mask_grid_points_using_shape_file(lats, lons, region_boundary, data_array_2d = True):
+    ''' Generate two-dimensional mask array (0:unmasked, 1:masked)
+    mask_array(ix,iy) == 0, if (lats[iy,ix], lons[iy,ix]) is located within the region boundary
+    mask_array(ix,iy) == 1, otherwise
+
+    :param lats: A 1D or 2D numpy array of sorted lat values.
+    :type lats: :class:`numpy.ndarray`
+    :param lons: A 1D or 2D numpy array of sorted lon values.
+    :type lons: :class:`numpy.ndarray`
+    :param region_boundary: A list or an array of lists including boundary vertices
+
+    :returns: mask_array, a two-dimensional array with zeros and ones 
+    :type mask_array: : class:'numpy.ndarray'
+
+    :raises ValueError: If the dimensions of lats and lons are different
+    '''
+
+    if lats.ndim != lons.ndim:
+        raise ValueError('Latitudes and longitudes must have the same dimension.')
+    
+    if lons.max() > 180.:
+        lons[lons>180.] = lons[lons>180.]-360.
+
+    if data_array_2d:
+
+        if lats.ndim == 1:
+            lons, lats = np.meshgrid(lons,lats)
+
+        ny, nx = lons.shape
+
+        mask = np.ones([ny, nx])
+
+        for iregion,region in enumerate(region_boundary):
+            print iregion
+            path = Path(region)         
+            for iy in np.arange(ny):
+                for ix in np.arange(nx):
+                    mask[iy,ix] = mask[iy,ix] - path.contains_point((lons[iy,ix],lats[iy,ix]))
+    else:
+
+        ndata = lons.size
+
+        mask = np.ones(ndata)
+
+        for iregion,region in enumerate(region_boundary):
+            print iregion
+            path = Path(region)
+            for idata in np.arange(ndata):
+                mask[idata] = mask[iy,ix] - path.contains_point((lons[idata],lats[idata]))
+
+    return mask
+              
 
 def reshape_monthly_to_annually(dataset):
     ''' Reshape monthly binned dataset to annual bins.

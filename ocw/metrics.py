@@ -107,6 +107,11 @@ class TemporalStdDev(UnaryMetric):
         '''
         return target_dataset.values.std(axis=0, ddof=1)
 
+class WetSpellAnalysis(UnaryMetric):
+    '''Using precipitation data, detect wet spells (consecutive rainfall event) and compile spell duration, peak intensity and total precipitation.'''
+    
+    def run(self,target_dataset):
+        '''target_dataset must be a sub-daily precipitation dataset. 
 
 class StdDevRatio(BinaryMetric):
     '''Calculate the standard deviation ratio between two datasets.'''
