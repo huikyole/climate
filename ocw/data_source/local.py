@@ -127,17 +127,14 @@ def load_merra_3d_files(file_path,
     :type variable_name: :mod:`string`
     :param name: (Optional) A name for the loaded dataset.
     :type name: :mod:`string`
-    :param lat_name: (Optional) The latitude variable name to extract from the
-        dataset.
-    :type latitude_range: :list:float   
-    :param longitude_range: (Optional) western and eastern boundary of the sub-region
-    :type longitude_range: :list:float   
+    :param latitude_range: (Optional) minimum and maximum latitudes for spatial subsetting
+    :type name: :list:float  ex) [-30, 20]
+    :param longitude_range: (Optional) minimum and maximum longitudes (Western and eastern boundaries) for spatial subsetting
+    :type name: :list:float  ex) [-170, 60]
     :returns: An OCW Dataset object with the requested variable's data from
         the NetCDF file.
     :rtype: :class:`dataset.Dataset`
-    :raises ValueError: When the specified file path cannot be loaded by ndfCDF4
-        or when the lat/lon/time variable name cannot be determined
-        automatically.
+    :raises ValueError: 
     '''                  
     
     merra_files = []
