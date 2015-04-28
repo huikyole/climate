@@ -171,14 +171,11 @@ class Dataset:
         time_dim = len(times.shape)
         value_dim = len(values.shape)
         lat_count = lats.shape[0]
-        lon_count = lons.shape[0]
+        if lat_dim != 1:
+            lon_count = lons.shape[1]
         time_count = times.shape[0]
         
-        if lat_dim != 1:
-            err_msg = "Latitude Array should be 1 dimensional.  %s dimensions found." % lat_dim
-        elif lon_dim != 1:
-            err_msg = "Longitude Array should be 1 dimensional. %s dimensions found." % lon_dim
-        elif time_dim != 1:
+        if time_dim != 1:
             err_msg = "Time Array should be 1 dimensional.  %s dimensions found." % time_dim
         elif value_dim < 2:
             err_msg = "Value Array should be at least 2 dimensional.  %s dimensions found." % value_dim
