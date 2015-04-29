@@ -147,8 +147,8 @@ def list_model_screen(header):
      screen.getstr()
 
 
-def manage_model_screen(header, note=""):
-     '''Generates Manage Model screen.
+def manage_nuWRF_screen(header, note=""):
+     '''Generates Manage nuWRF screen.
 
      :param header: Header of page
      :type header: string
@@ -158,24 +158,44 @@ def manage_model_screen(header, note=""):
 
      option = ''
      while option != '0':
-          ready_screen("manage_model_screen", note)
+          ready_screen("manage_nuWRF_screen", note)
           screen.addstr(1, 1, header)
-          screen.addstr(4, 4, "1 - Load Model File     [Number of loaded model: {0}]".format(len(model_datasets)))
-          screen.addstr(6, 4, "2 - Unload Model File")
-          screen.addstr(8, 4, "3 - List Model File")
-          screen.addstr(10, 4, "0 - Return to Main Menu")
-          screen.addstr(12, 2, "Select an option: ")
+          screen.addstr(4, 4, "1 - Load nuWRF Simulation Files") ## TODO: this should display the selected simulation name [Number of loaded model: {0}]".format(len(nuWRF_datasets)))
+          screen.addstr(6, 4, "2 - Unload nuWRF Simulation Files")
+          screen.addstr(8, 4, "0 - Return to Main Menu")
+          screen.addstr(10, 2, "Select an option: ")
           screen.refresh()
           option = screen.getstr()
 
           if option == '1':
-               note = load_model_screen(header)
+               note = load_nuWRF_screen(header)
           if option == '2':
-               note = unload_model_screen(header)
-          if option == '3':
-               note = list_model_screen(header)
-               note = " "
+               note = unload_nuWRF_screen(header)
 
+def manage_GEOS_screen(header, note=""):
+     '''Generates Manage GEOS screen.
+
+     :param header: Header of page
+     :type header: string
+     :param note: Notification, defult to empty string.
+     :type note: string
+     '''
+
+     option = ''
+     while option != '0':
+          ready_screen("manage_GEOS_screen", note)
+          screen.addstr(1, 1, header)
+          screen.addstr(4, 4, "1 - Load GEOS Simulation Files") ## TODO: this should display the selected simulation name     [Number of loaded model: {0}]".format(len(model_datasets)))
+          screen.addstr(6, 4, "2 - Unload GEOS Simulation Files")
+          screen.addstr(8, 4, "0 - Return to Main Menu")
+          screen.addstr(10, 2, "Select an option: ")
+          screen.refresh()
+          option = screen.getstr()
+
+          if option == '1':
+               note = load_GEOS_screen(header)
+          if option == '2':
+               note = unload_GEOS_screen(header)
 
 ##############################################################
 #     Manage Observation Screen
@@ -790,7 +810,7 @@ def settings_screen(header):
 #     Main Menu Screen
 ##############################################################
 
-def main_menu(model_datasets, models_info, observation_datasets, observations_info, note=""):
+def main_menu(nuWRF_datasets, nuWRF_info, GEOS_datasets, GEOS_info, observation_datasets, observations_info, note=""):
      '''This function Generates main menu page.
 
      :param model_datasets: list of model dataset objects
@@ -806,30 +826,35 @@ def main_menu(model_datasets, models_info, observation_datasets, observations_in
      option = ''
      while option != '0':
           ready_screen("main_menu", note)
-          model_status = "NC" if len(model_datasets) == 0 else "C"     #NC (Not Complete), if there is no model added, C (Complete) if model is added
+          nuWRF_status = "NC" if len(nuWRF_datasets) == 0 else "C"     #NC (Not Complete), if there is no model added, C (Complete) if model is added
+          GEOS_status = "NC" if len(GEOS_datasets) == 0 else "C"     #NC (Not Complete), if there is no model added, C (Complete) if model is added
           obs_status = "NC" if len(observations_info) == 0 else "C"    #NC (Not Complete), if there is no observation added, C (Complete) if observation is added
           screen.addstr(1, 1, "Main Menu:")
-          screen.addstr(4, 4, "1 - Manage Model ({0})".format(model_status))
-          screen.addstr(6, 4, "2 - Manage Observation ({0})".format(obs_status))
-          screen.addstr(8, 4, "3 - Run(Config File) [coming soon....]")
-          screen.addstr(10, 4, "4 - Run(Settings)")
-          screen.addstr(12, 4, "0 - EXIT")
+          screen.addstr(4, 4, "1 - Manage nuWRF ({0})".format(nuWRF_status))
+          screen.addstr(6, 4, "2 - Manage GEOS ({0})".format(GEOS_status))
+          screen.addstr(8, 4, "3 - Manage Observation ({0})".format(obs_status))
+          screen.addstr(10, 4, "4 - Run(Config File) [coming soon....]")
+          screen.addstr(12, 4, "5 - Run(Settings)")
+          screen.addstr(14, 4, "0 - EXIT")
           screen.addstr(18, 2, "Select an option: ")
           screen.refresh()
           option = screen.getstr()
 
           if option == '1':
-               header = "Main Menu > Manage Model"
-               manage_model_screen(header)
+               header = "Main Menu > Manage nuWRF"
+               manage_nuWRF_screen(header)
           if option == '2':
+               header = "Main Menu > Manage GEOS"
+               manage_GEOS_screen(header)
+          if option == '3':
                header = "Main Menu > Manage Observation"
                manage_obs_screen(header)
-          if option == '3':
+          if option == '4':
                header = "Main Menu > Run(Config File)"
                #TODO: function to read config file and run evaluation
-          if option == '4':
+          if option == '5':
                if model_status =='NC' or obs_status == 'NC':
-                    main_menu(model_datasets, models_info, observation_datasets, observations_info, note="WARNING: Please complete step 1 and 2 before 4.")
+                    main_menu(model_datasets, models_info, observation_datasets, observations_info, note="WARNING: Please complete step 1 or 2 or 3 before 5.")
                else:
                     header = "Main Menu > Run(Settings)"
                     settings_screen(header)
@@ -838,11 +863,13 @@ def main_menu(model_datasets, models_info, observation_datasets, observations_in
 
 
 if __name__ == '__main__':
-     TITLE = "Open Climate Workbench Evaluation System"
-     ORGANIZATION = "Apache Software Foundation"
+     TITLE = "Regional Climate Model Evaluation System for the downscaling project"
+     ORGANIZATION = "JPL/UCLA JIFFRESSE powered by Apache Software Foundation"
      screen = curses.initscr()
-     model_datasets = []           #list of model dataset objects
-     models_info = []              #list of dictionaries that contain information for each model
+     nuWRF_datasets = []           #A loaded nuWRF simulation
+     nuWRF_info = []              #list of dictionaries that contain information for the loaded nuWRF simulation
+     GEOS_datasets = []           #A loaded GEOS simulation
+     GEOS_info = []              #list of dictionaries that contain information for the loaded GEOS simulation
      observation_datasets = []     #list of observation dataset objects
      observations_info = []        #list of dictionaries that contain information for each observation
-     main_menu(model_datasets, models_info, observation_datasets, observations_info)
+     main_menu(nuWRF_datasets, nuWRF_info, GEOS_datasets, GEOS_info, observation_datasets, observations_info)
