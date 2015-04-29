@@ -19,6 +19,7 @@ import curses
 import sys
 import os
 import numpy as np
+from glob import glob
 
 from netCDF4 import Dataset
 from datetime import datetime, timedelta
@@ -29,7 +30,7 @@ import ocw.dataset_processor as dsp
 import ocw.evaluation as evaluation
 import ocw.data_source.rcmed as rcmed
 from ocw.dataset import Bounds
-from ocw.data_source.local import load_file
+from ocw.data_source.local import load_WRF_2d_files
 
 
 def ready_screen(page, note=""):
@@ -65,42 +66,59 @@ def ready_screen(page, note=""):
 #         Manage Model Screen
 ##############################################################
 
-def load_model_screen(header):
-     '''Generates screen to be able to load model file.
-     Path to model file (netCDF) and variable name is required.
+def load_nuWRF_screen(header):
+    '''Generates screen to be able to load model file.
+    Path to model file (netCDF) and variable name is required.
 
-     :param header: Header of page
-     :type header: string
+    :param header: Header of page
+    :type header: string
 
-     :returns: Notification
-     :rtype: string
-     '''
+    :returns: Notification
+    :rtype: string
+    '''
+     
+    ready_screen("load_nuWRF_screen")
+    screen.addstr(1, 1, header + " > Load Model File ")
+    screen.addstr(3, 2, "1. B24 1999-11-01 to 2010-11-01")
+    screen.addstr(6, 2, "Choose nuWRF simulation: ")
+    simulation_number = screen.getstr()
+    if simulation_number == '1':
+        model_path = '/discover/nobackup/projects/dscale/jlcase/runs/PRODUCTION/B24/'   
+        simulation_name = 'B24'
+     
+        netCDF_file = Dataset(model_path+'wrf2dout_d01_1999-11-01_00:00:00', 'r')
+        all_netcdf_variables = [variable.encode() for variable in netCDF_file.variables.keys()]
+        netCDF_file.close()
 
-     ready_screen("load_model_screen")
-     screen.addstr(1, 1, header + " > Load Model File ")
-     screen.addstr(4, 2, "Enter model path: ")
-     model_path = screen.getstr()
-     try:
-          netCDF_file = Dataset(model_path, 'r')
-          all_netcdf_variables = [variable.encode() for variable in netCDF_file.variables.keys()]
-          netCDF_file.close()
-          try:
-               screen.addstr(6, 2, "Enter model variable name {0}: ".format(all_netcdf_variables))
-               variable_name = screen.getstr()
-               model_dataset = load_file(model_path, variable_name)
-               model_datasets.append(model_dataset)
-               models_info.append({ 'directory': model_path,
-                                 'variable_name': variable_name
-                              })
-               note = "Model file successfully added."
-          except:
-               note = "WARNING: Model file cannot be added. The variable [{0}] is not accepted. Please try again.".format(variable_name)
-     except:
-          note = "WARNING: Model file cannot be read. Please check the file directory or format. Only netCDF format is accepted."
+    
+    screen.addstr(7, 2, "Enter model variable name {0}: ".format(all_netcdf_variables))
+    variable_name = screen.getstr()
+    filename_pattern=[]
+    pattern ='*'
+    line = 0
+    while pattern != '0':
+        screen.addstr(15+line, 2, "Enter file name pattern: (ex) *-06-* for June data, * for all data, 0: done) ")
+        pattern = screen.getstr()
+        filename_pattern.append('wrf2dout'+pattern)
+        print filename_pattern
+        line = line+1
+    model_files = []
+    for pattern in filename_pattern:
+        model_files.extend(glob(model_path+pattern))
+    model_files.sort()
+    nfile = len(model_files)
+    screen.addstr(17+line, 2, model_files[0]+'....'+model_files[-1]) 
+    try:
+        nuWRF_datasets.append(load_WRF_2d_files(model_path, filename_pattern, variable_name))
+        nuWRF_info.append({ 'Simulation': simulation_name,
+                            'variable_name': variable_name,
+                            'filename patterns': filename_pattern
+                           })
+        note = variable_name +" from "+ str(nfile)+ " files in " + simulation_name+" simulation has been successfully added."
+    except:
+        note = "WARNING: Model file cannot be added. The variable [{0}] is not accepted. Please try again.".format(variable_name)
 
-     return note
-
-
+    return note
 
 def unload_model_screen(header):
      '''Generates screen to be able to unload model file.
