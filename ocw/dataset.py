@@ -171,6 +171,7 @@ class Dataset:
         time_dim = len(times.shape)
         value_dim = len(values.shape)
         lat_count = lats.shape[0]
+        lon_count = lons.shape[0]
         if lat_dim != 1:
             lon_count = lons.shape[1]
         time_count = times.shape[0]
