@@ -172,7 +172,8 @@ class Dataset:
         value_dim = len(values.shape)
         lat_count = lats.shape[0]
         lon_count = lons.shape[0]
-        if lat_dim != 1:
+        
+        if lat_dim == 2 and lon_dim == 2:
             lon_count = lons.shape[1]
         time_count = times.shape[0]
         
