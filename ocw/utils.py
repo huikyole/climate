@@ -179,7 +179,7 @@ def normalize_lat_lon_values(lats, lons, values):
 
     :raises ValueError: If the lat/lon values are not sorted.
     '''
-    if lats.ndim ==1 and lons.dim ==1:
+    if lats.ndim ==1 and lons.ndim ==1:
         # Avoid unnecessary shifting if all lons are higher than 180
         if lons.min() > 180:
             lons -= 360
