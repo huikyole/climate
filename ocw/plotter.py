@@ -23,6 +23,7 @@ from mpl_toolkits.axes_grid1 import ImageGrid
 import scipy.stats.mstats as mstats
 import numpy as np
 import numpy.ma as ma
+from matplotlib.patches import Polygon
 
 # Set the default colormap to coolwarm
 mpl.rc('image', cmap='coolwarm')
@@ -233,110 +234,63 @@ def draw_taylor_diagram(results, names, refname, fname, fmt='png',
     fig.savefig('%s.%s' %(fname, fmt), bbox_inches='tight', dpi=fig.dpi)
     fig.clf()
 
-def draw_subregions(subregions, lats, lons, fname, fmt='png', ptitle='',
-                    parallels=None, meridians=None, subregion_masks=None):
-    ''' Draw subregion domain(s) on a map.
+def draw_screen_poly(boundary_array, m, linecolor='k'):
 
-    :param subregions: The subregion objects to plot on the map.
-    :type subregions: :class:`list` of subregion objects (Bounds objects)
+    ''' Draw a polygon on a map
 
-    :param lats: Array of latitudes values.
-    :type lats: :class:`numpy.ndarray`
+    :param boundary_array: [lat_north, lat_south, lon_east, lon_west]
+    :param m   : Basemap object
+    '''
 
-    :param lons: Array of longitudes values.
-    :type lons: :class:`numpy.ndarray`
+    lats = [boundary_array[0], boundary_array[0], boundary_array[1], boundary_array[1]]
+    lons = [boundary_array[3], boundary_array[2], boundary_array[2], boundary_array[3]]
+    x, y = m( lons, lats )
+    xy = zip(x,y)
+    poly = Polygon( xy, facecolor='none',edgecolor=linecolor )
+    plt.gca().add_patch(poly)
+
+def draw_subregions(subregions, latitude_minimum, latitude_maximum, longitude_minimum, longitude_maximum, fname='subregion',ptitle='', fmt='png'):
+    ''' Draw subregion domain(s) on a map bounded by latitude_minimum, latitude_maximum, longitude_minimum, and longitude_maximum.
+
+    :param subregions: The subregion list to plot on the map.
+    :type subregions: Each element has a name of each subregion and array of subregion boundaries [north, south, east, west] 
+
+    :param latitude_minimum: map boundary
+    :type latitude_minimum: :class:`float`
+
+    :param latitude_maximum: map boundary
+    :type latitude_maximum: :class:`float`
+
+    :param longitude_minimum: map boundary
+    :type latitude_minimum: :class:`float`
+
+    :param longitude_maximum: map boundary
+    :type latitude_maximum: :class:`float`
 
     :param fname: The filename of the plot.
     :type fname: :mod:`string`
 
-    :param fmt: (Optional) filetype for the output.
-    :type fmt: :mod:`string`
-
     :param ptitle: (Optional) plot title.
     :type ptitle: :mod:`string`
 
-    :param parallels: (Optional) :class:`list` of :class:`int` or :class:`float` for the parallels to
-        be drawn. See the `Basemap documentation <http://matplotlib.org/basemap/users/graticule.html>`_
-        for additional information.
-    :type parallels: :class:`list` of :class:`int` or :class:`float`
-
-    :param meridians: (Optional) :class:`list` of :class:`int` or :class:`float` for the meridians to
-        be drawn. See the `Basemap documentation <http://matplotlib.org/basemap/users/graticule.html>`_
-        for additional information.
-    :type meridians: :class:`list` of :class:`int` or :class:`float`
-
-    :param subregion_masks: (Optional) :class:`dict` of :class:`bool` arrays for each
-        subregion for giving finer control of the domain to be drawn, by default
-        the entire domain is drawn.
-    :type subregion_masks: :class:`dict` of :class:`bool` arrays
+    :param fmt: (Optional) filetype for the output.
+    :type fmt: :mod:`string`
     '''
+
     # Set up the figure
     fig = plt.figure()
-    fig.set_size_inches((8.5, 11.))
-    fig.dpi = 300
     ax = fig.add_subplot(111)
 
-    # Determine the map boundaries and construct a Basemap object
-    lonmin = lons.min()
-    lonmax = lons.max()
-    latmin = lats.min()
-    latmax = lats.max()
-    m = Basemap(projection='cyl', llcrnrlat=latmin, urcrnrlat=latmax,
-                llcrnrlon=lonmin, urcrnrlon=lonmax, resolution='l', ax=ax)
+    m = Basemap(ax=ax, projection='cyl',llcrnrlat = latitude_minimum, urcrnrlat = latitude_maximum,
+            llcrnrlon = longitude_minimum, urcrnrlon = longitude_maximum, resolution = 'l')
+    m.drawcoastlines(linewidth=0.75)
+    m.drawcountries(linewidth=0.75)
+    m.etopo()
 
-    # Draw the borders for coastlines and countries
-    m.drawcoastlines(linewidth=1)
-    m.drawcountries(linewidth=.75)
-    m.drawstates()
-
-    # Create default meridians and parallels. The interval between
-    # them should be 1, 5, 10, 20, 30, or 40 depending on the size
-    # of the domain
-    length = max((latmax - latmin), (lonmax - lonmin)) / 5
-    if length <= 1:
-        dlatlon = 1
-    elif length <= 5:
-        dlatlon = 5
-    else:
-        dlatlon = np.round(length, decimals=-1)
-
-    if meridians is None:
-        meridians = np.r_[np.arange(0, -180, -dlatlon)[::-1], np.arange(0, 180, dlatlon)]
-    if parallels is None:
-        parallels = np.r_[np.arange(0, -90, -dlatlon)[::-1], np.arange(0, 90, dlatlon)]
-
-    # Draw parallels / meridians
-    m.drawmeridians(meridians, labels=[0, 0, 0, 1], linewidth=.75, fontsize=10)
-    m.drawparallels(parallels, labels=[1, 0, 0, 1], linewidth=.75, fontsize=10)
-
-    # Set up the color scaling
-    cmap = plt.cm.rainbow
-    norm = mpl.colors.BoundaryNorm(np.arange(1, len(subregions) + 3), cmap.N)
-
-    # Process the subregions
-    for i, reg in enumerate(subregions):
-        if subregion_masks is not None and reg.name in subregion_masks.keys():
-            domain = (i + 1) * subregion_masks[reg.name]
-        else:
-            domain = (i + 1) * np.ones((2, 2))
-
-        nlats, nlons = domain.shape
-        domain = ma.masked_equal(domain, 0)
-        reglats = np.linspace(reg.lat_min, reg.lat_max, nlats)
-        reglons = np.linspace(reg.lon_min, reg.lon_max, nlons)
-        reglons, reglats = np.meshgrid(reglons, reglats)
-
-        # Convert to to projection coordinates. Not really necessary
-        # for cylindrical projections but keeping it here in case we need
-        # support for other projections.
-        x, y = m(reglons, reglats)
-
-        # Draw the subregion domain
-        m.pcolormesh(x, y, domain, cmap=cmap, norm=norm, alpha=.5)
-
-        # Label the subregion
-        xm, ym = x.mean(), y.mean()
-        m.plot(xm, ym, marker='$%s$' %("R"+str(i+1)), markersize=12, color='k')
+    # Draw a rectangular for each subregion
+    for subregion in subregions:
+        draw_screen_poly(subregion[1], m, 'r')
+        plt.annotate(subregion[0],xy=(0.5*(subregion[1][2]+subregion[1][3]), 0.5*(subregion[1][0]+subregion[1][1])), ha='center',va='center', fontsize=14)
 
     # Add the title
     ax.set_title(ptitle)

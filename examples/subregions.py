@@ -1,53 +1,37 @@
 #Apache OCW lib immports
-from ocw.dataset import Dataset, Bounds
-import ocw.data_source.local as local
-import ocw.data_source.rcmed as rcmed
-import ocw.dataset_processor as dsp
-import ocw.evaluation as evaluation
-import ocw.metrics as metrics
+from ocw.dataset import Bounds
 import ocw.plotter as plotter
-import ocw.utils as utils
+import matplotlib.pyplot as plt
+from mpl_toolkits.basemap import Basemap
+import yaml
+import operator
 
-import datetime
-import numpy as np
-import numpy.ma as ma
-
-OUTPUT_PLOT = "subregions"
-
-# Spatial and temporal configurations
 LAT_MIN = -45.0 
 LAT_MAX = 42.24
 LON_MIN = -24.0
 LON_MAX = 60.0 
-START_SUB = datetime.datetime(2000, 01, 1)
-END_SUB = datetime.datetime(2007, 12, 31)
 
-#regridding parameters
-gridLonStep=0.5
-gridLatStep=0.5
+map_boundary = Bounds(LAT_MIN, LAT_MAX, LON_MIN, LON_MAX)
 
-#Regrid
-print("... regrid")
-new_lats = np.arange(LAT_MIN, LAT_MAX, gridLatStep)
-new_lons = np.arange(LON_MIN, LON_MAX, gridLonStep)
+# Load a subregion boundary information in yaml format
+subregions= yaml.load(open('cordex_AF.yaml'))
 
-list_of_regions = [
- Bounds(-10.0, 0.0, 29.0, 36.5, START_SUB, END_SUB), 
- Bounds(0.0, 10.0,  29.0, 37.5, START_SUB, END_SUB),
- Bounds(10.0, 20.0, 25.0, 32.5, START_SUB, END_SUB),
- Bounds(20.0, 33.0, 25.0, 32.5, START_SUB, END_SUB),
- Bounds(-19.3,-10.2,12.0, 20.0, START_SUB, END_SUB),
- Bounds( 15.0, 30.0, 15.0, 25.0,START_SUB, END_SUB),
- Bounds(-10.0, 10.0, 7.3, 15.0, START_SUB, END_SUB),
- Bounds(-10.9, 10.0, 5.0, 7.3,  START_SUB, END_SUB),
- Bounds(33.9, 40.0,  6.9, 15.0, START_SUB, END_SUB),
- Bounds(10.0, 25.0,  0.0, 10.0, START_SUB, END_SUB),
- Bounds(10.0, 25.0,-10.0,  0.0, START_SUB, END_SUB),
- Bounds(30.0, 40.0,-15.0,  0.0, START_SUB, END_SUB),
- Bounds(33.0, 40.0, 25.0, 35.0, START_SUB, END_SUB)]
+# sort the subregion by region names and make a list
+subregions= sorted(subregions.items(),key=operator.itemgetter(0))
 
-#for plotting the subregions
-plotter.draw_subregions(list_of_regions, new_lats, new_lons, OUTPUT_PLOT, fmt='png')
+plotter.draw_subregions(subregions, map_boundary.lat_min, map_boundary.lat_max, map_boundary.lon_min, map_boundary.lon_max, fname='cordex_AF_subregions')
 
-                               
+'''
+fig = plt.figure()
+ax =fig.add_subplot(1,1,1)
+m = Basemap(ax=ax, projection='cyl',llcrnrlat = LAT_MIN, urcrnrlat = LAT_MAX,
+            llcrnrlon = LON_MIN, urcrnrlon = LON_MAX, resolution = 'l')
+m.drawcoastlines(linewidth=0.75)
+m.drawcountries(linewidth=0.75)
+m.etopo()
 
+for subregion in subregions:
+    plotter.draw_screen_poly(subregion[1], m, 'r')
+    plt.annotate(subregion[0],xy=(0.5*(subregion[1][2]+subregion[1][3]), 0.5*(subregion[1][0]+subregion[1][1])), ha='center',va='center', fontsize=14)
+plt.show()
+'''
