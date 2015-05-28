@@ -362,3 +362,30 @@ def calc_time_series(dataset):
         t_series.append(dataset.values[t,:,:].mean())
     
     return t_series
+
+def calc_subregion_area_mean(dataset, subregions):
+    ''' Calculate area mean values for a given subregions
+
+    :param dataset: Dataset object
+    :type dataset: :class:`dataset.Dataset`
+
+    :param subregions: list of subregions 
+    :type subregions: :class:`list`
+
+    :returns: area averaged time series for the dataset of shape (ntime, nsubregion)
+    '''
+
+    if dataset.lons.ndim == 1:
+       lons, lats = np.meshgrid(dataset.lons, dataset.lats)
+    else:
+       lons = dataset.lons
+       lats = dataset.lats
+
+    t_series =np.zeros([dataset.values.shape[0], len(subregions)])
+
+    for iregion, subregion in enumerate(subregions):
+        lat_min, lat_max, lon_min, lon_max = subregion[1]
+        y_index,x_index = np.where((lats >= lat_min) & (lats <= lat_max) & (lons >= lon_min) & (lons <= lon_max))
+        t_series[:, iregion] = np.mean(dataset.values[:,y_index, x_index], axis=1)
+    return t_series
+

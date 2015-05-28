@@ -14,7 +14,7 @@ LON_MAX = 60.0
 #map_boundary = Bounds(LAT_MIN, LAT_MAX, LON_MIN, LON_MAX)
 
 # Load a subregion boundary information in yaml format
-subregions= yaml.load(open('cordex_AF.yaml'))
+subregions= yaml.load(open('cordex_AF_subregions.yaml'))
 
 # sort the subregion by region names and make a list
 subregions= sorted(subregions.items(),key=operator.itemgetter(0))
