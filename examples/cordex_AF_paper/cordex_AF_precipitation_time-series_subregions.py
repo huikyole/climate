@@ -14,8 +14,8 @@ import datetime
 
 
 """ Step 1: Download CRU precipitation data and load the data into OCW Dataset Object """
-start_time = datetime.datetime(1991,1,1)
-end_time = datetime.datetime(2007,12,31)
+start_time = datetime.datetime(1990,1,1)
+end_time = datetime.datetime(2007,12,1)
 
 min_lat = -45.0
 max_lat = 42.24
@@ -24,7 +24,7 @@ max_lon = 60.0
 
 bounds = Bounds(min_lat, max_lat, min_lon, max_lon, start_time, end_time)
 
-cru31_dataset_original = local.load_file('/nas/share1-hp/jinwonki/data/obs/cru3.1/d/GLOBAL_CRU_CTL_CRU-TS31_MM_0.5deg_1901-2009_pr.nc','pr')
+cru31_dataset_original = local.load_file('/home/huikyole/climate/examples/cordex_AF_paper/data/GLOBAL_CRU_CTL_CRU-TS31_MM_0.5deg_1990-2007_pr.nc','pr')
 cru31_dataset = dsp.subset(bounds, cru31_dataset_original)
 
 

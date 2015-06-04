@@ -20,6 +20,7 @@
 import sys
 import datetime as dt
 import numpy as np
+import numpy.ma as ma
 import datetime 
 
 from mpl_toolkits.basemap import shiftgrid
@@ -47,15 +48,17 @@ def decode_time_values(dataset, time_var_name):
 
     times = []
     arg = {}
+    # June/03/2015 by huikyole: temporarily ignore days in the parsed time
+
     if time_units == 'months':
         # datetime.timedelta doesn't support a 'months' option. To remedy
         # this, a month == 30 days for our purposes.
         for time_val in time_data:
-            times.append(time_base + relativedelta(months=int(time_val)))
+            times.append((time_base + relativedelta(months=int(time_val))).replace(day=1))
     else:
         for time_val in time_data:
             arg[time_units] = time_val
-            times.append(time_base + dt.timedelta(**arg))
+            times.append((time_base + dt.timedelta(**arg)).replace(day=1))
 
     return times
 
@@ -389,3 +392,35 @@ def calc_subregion_area_mean(dataset, subregions):
         t_series[:, iregion] = np.mean(dataset.values[:,y_index, x_index], axis=1)
     return t_series
 
+def calc_subregion_area_mean_and_std(dataset_array, subregions):
+    ''' Calculate area mean and standard deviation values for a given subregions using datasets on common grid points
+
+    :param dataset_array: Dataset object array
+    :type list:  
+
+    :param subregions: list of subregions
+    :type subregions: :class:`list`
+
+    :returns: area averaged time series for the dataset of shape (ntime, nsubregion)
+    '''
+
+    ndata = len(dataset_array)
+    dataset0 = dataset_array[0]
+    if dataset0.lons.ndim == 1:
+       lons, lats = np.meshgrid(dataset0.lons, dataset0.lats)
+    else:
+       lons = dataset0.lons
+       lats = dataset0.lats
+    # dataset0.values.shsape[0]: length of the time dimension
+    # spatial average
+    t_series =ma.zeros([ndata, dataset0.values.shape[0], len(subregions)])
+    # spatial standard deviation
+    spatial_std =ma.zeros([ndata, dataset0.values.shape[0], len(subregions)])
+
+    for iregion, subregion in enumerate(subregions):
+        lat_min, lat_max, lon_min, lon_max = subregion[1]
+        y_index,x_index = np.where((lats >= lat_min) & (lats <= lat_max) & (lons >= lon_min) & (lons <= lon_max))
+        for idata in np.arange(ndata):
+            t_series[idata, :, iregion] = ma.mean(dataset_array[idata].values[:,y_index, x_index], axis=1)
+            spatial_std[idata, :, iregion] = ma.std(dataset_array[idata].values[:,y_index, x_index], axis=1)
+    return t_series, spatial_std

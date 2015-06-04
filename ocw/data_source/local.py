@@ -28,6 +28,7 @@ import ocw.utils as utils
 import netCDF4
 import numpy
 import numpy.ma as ma
+import os
 
 LAT_NAMES = ['x', 'rlat', 'rlats', 'lat', 'lats', 'latitude', 'latitudes']
 LON_NAMES = ['y', 'rlon', 'rlons', 'lon', 'lons', 'longitude', 'longitudes']
@@ -269,3 +270,30 @@ def load_file(file_path,
     return Dataset(lats, lons, times, values, variable=variable_name,
                    units=variable_unit, name=name, origin=origin)
 
+def load_multiple_files(data_info):
+    ''' load files from multiple datasets and return an array of OCW datasets'''
+   
+    data_filenames = glob(data_info['path'])
+    data_filenames.sort()
+    # number of files
+    ndata = len(data_filenames)
+    if ndata == 1:
+        try:
+            data_name = [data_info['data_name']]
+        except:
+            data_name =['ref']
+    else:
+        data_name = []
+        data_filenames_reversed = []
+        for element in data_filenames:
+            data_filenames_reversed.append(element[::-1])
+        prefix = os.path.commonprefix(data_filenames)
+        postfix = os.path.commonprefix(data_filenames_reversed)[::-1]
+        for element in data_filenames:
+            data_name.append(element.replace(prefix,'').replace(postfix,''))
+
+    datasets = []
+    for filename in data_filenames:
+        datasets.append(load_file(filename, data_info['variable'])) 
+    
+    return datasets, data_name

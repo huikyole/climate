@@ -140,7 +140,7 @@ def ensemble(datasets):
     """
     _check_dataset_shapes(datasets)
     dataset_values = [dataset.values for dataset in datasets]
-    ensemble_values = np.mean(dataset_values, axis=0)
+    ensemble_values = ma.mean(dataset_values, axis=0)
     
     # Build new dataset object from the input datasets and the ensemble values and return it
     ensemble_dataset = ds.Dataset(datasets[0].lats, 
@@ -345,6 +345,67 @@ def write_netcdf(dataset, path, compress=True):
     times[:] = netCDF4.date2num(dataset.times, times.units)
     values[:] = dataset.values
     values.units = dataset.units
+
+    out_file.close()
+
+def write_netcdf_multiple_datasets_with_subregions(ref_dataset_array, ref_names, 
+                                                   model_dataset_array, model_names,
+                                                   path,
+                                                   subregions = None, ref_subregion_mean = None, ref_subregion_std = None, 
+                                                   model_subregion_mean = None, model_subregion_std = None):
+    #Write multiple reference and model datasets and their subregional means and standard deivations in a NetCDF file.
+
+    #:To be updated 
+    #
+    out_file = netCDF4.Dataset(path, 'w', format='NETCDF4')
+
+    dataset = ref_dataset_array[0]
+    # Set attribute lenghts
+    nobs = len(ref_dataset_array)
+    nmodel = len(model_dataset_array)
+    lat_len = len(dataset.lats)
+    lon_len = len(dataset.lons)
+    time_len = len(dataset.times)
+
+    if not subregions == None:
+        nsubregion = len(subregions)
+                 
+    # Create attribute dimensions
+    lat_dim = out_file.createDimension('y', lat_len)
+    lon_dim = out_file.createDimension('x', lon_len)
+    time_dim = out_file.createDimension('time', time_len)
+
+    # Create variables and store the values
+    lats = out_file.createVariable('lat', 'f8', ('y'))
+    lats[:] = dataset.lats
+    lons = out_file.createVariable('lon', 'f8', ('x'))
+    lons[:] = dataset.lons
+    times = out_file.createVariable('time', 'f8', ('time',))
+    times.units = "days since %s" % dataset.times[0]
+    times[:] = netCDF4.date2num(dataset.times, times.units)
+
+    for iobs in np.arange(nobs):
+        out_file.createVariable(ref_names[iobs], 'f8', ('time','y','x'))
+        out_file.variables[ref_names[iobs]][:] = ref_dataset_array[iobs].values[:]
+        out_file.variables[ref_names[iobs]].units = ref_dataset_array[iobs].units
+    for imodel in np.arange(nmodel):
+        out_file.createVariable(model_names[imodel], 'f8', ('time','y','x'))
+        out_file.variables[model_names[imodel]][:] = model_dataset_array[imodel].values[:]
+        out_file.variables[model_names[imodel]].units = model_dataset_array[imodel].units
+
+    if not subregions == None:
+        nsubregion = len(subregions)
+        out_file.createDimension('nsubregion', nsubregion)
+        out_file.createDimension('nobs', nobs)
+        out_file.createDimension('nmodel', nmodel)
+        out_file.createVariable('obs_subregion_mean', 'f8', ('nobs','time','nsubregion'))
+        out_file.variables['obs_subregion_mean'][:] = ref_subregion_mean[:]
+        out_file.createVariable('obs_subregion_std', 'f8', ('nobs','time','nsubregion'))
+        out_file.variables['obs_subregion_std'][:] = ref_subregion_std[:]
+        out_file.createVariable('model_subregion_mean', 'f8', ('nmodel','time','nsubregion'))
+        out_file.variables['model_subregion_mean'][:] = model_subregion_mean[:]
+        out_file.createVariable('model_subregion_std', 'f8', ('nmodel','time','nsubregion'))
+        out_file.variables['model_subregion_std'][:] = model_subregion_std[:]
 
     out_file.close()
 
@@ -855,6 +916,8 @@ def _are_bounds_contained_by_dataset(bounds, dataset):
     # TODO:  THIS IS TERRIBLY inefficent and we need to use a geometry lib instead in the future
     if not lat_min <= bounds.lat_min <= lat_max:
         error = "bounds.lat_min: %s is not between lat_min: %s and lat_max: %s" % (bounds.lat_min, lat_min, lat_max)
+        print bounds.lat_min, lat_min,lat_max
+        print bounds.lat_min == lat_min
         errors.append(error)
 
     if not lat_min <= bounds.lat_max <= lat_max:
