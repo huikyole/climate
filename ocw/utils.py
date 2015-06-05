@@ -280,9 +280,9 @@ def calc_climatology_year(dataset):
         # Get values reshaped to (num_year, 12, num_lats, num_lons)
         values = reshape_monthly_to_annually(dataset)
        # Calculate mean values over year (num_year, num_lats, num_lons)
-        annually_mean = values.mean(axis=1)
+        annually_mean = ma.mean(values, axis=1)
         # Calculate mean values over all years (num_lats, num_lons)
-        total_mean = annually_mean.mean(axis=0)
+        total_mean = ma.mean(annually_mean, axis=0)
 
     return annually_mean, total_mean
 
@@ -389,7 +389,7 @@ def calc_subregion_area_mean(dataset, subregions):
     for iregion, subregion in enumerate(subregions):
         lat_min, lat_max, lon_min, lon_max = subregion[1]
         y_index,x_index = np.where((lats >= lat_min) & (lats <= lat_max) & (lons >= lon_min) & (lons <= lon_max))
-        t_series[:, iregion] = np.mean(dataset.values[:,y_index, x_index], axis=1)
+        t_series[:, iregion] = ma.mean(dataset.values[:,y_index, x_index], axis=1)
     return t_series
 
 def calc_subregion_area_mean_and_std(dataset_array, subregions):
@@ -424,3 +424,15 @@ def calc_subregion_area_mean_and_std(dataset_array, subregions):
             t_series[idata, :, iregion] = ma.mean(dataset_array[idata].values[:,y_index, x_index], axis=1)
             spatial_std[idata, :, iregion] = ma.std(dataset_array[idata].values[:,y_index, x_index], axis=1)
     return t_series, spatial_std
+
+def calc_area_weighted_spatial_average(dataset):
+    '''Calculate area weighted average of the values in OCW dataset'''
+
+    if dataset.lats.ndim ==1:
+        lons, lats = np.meshgrid(dataset.lons, dataset.lats)
+    else:
+        lons = dataset.lons
+        lats = dataset.lats
+    weights = np.cos(lats*np.pi/180.) 
+    return ma.average(dataset.values, weights = weights)
+
