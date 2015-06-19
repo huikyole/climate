@@ -1,8 +1,8 @@
-workdir: /home/huikyole/climate/examples/cordex_AF_paper/
+workdir: /home/huikyole/climate/examples/Jinwon_paper/
 output_netcdf_filename: cordex_AF_precipitation.nc
 
-start_time: 1990-1-1
-end_time: 2007-12-1
+start_time: 1990-01-01
+end_time: 2007-12-01
 
 regrid:
     spatial_regrid_lats: !!python/tuple [-45.76, 42.24, 0.44]
@@ -12,12 +12,12 @@ datasets:
     reference:
         data_source: local
         data_name: CRU
-        path: /home/huikyole/climate/examples/cordex_AF_paper/data/GLOBAL_CRU_CTL_CRU-TS31_MM_0.5deg_1990-2007_pr.nc
+        path: /home/huikyole/climate/examples/Jinwon_paper/data/GLOBAL_CRU_CTL_CRU-TS31_MM_0.5deg_1990-2007_pr.nc
         variable: pr      
 
     targets:
         data_source: local
-        path: /home/huikyole/climate/examples/cordex_AF_paper/data/AFRICA*pr.nc                             
+        path: /home/huikyole/climate/examples/Jinwon_paper/data/AFRICA*pr.nc                             
         variable: pr      
 
 subregions:

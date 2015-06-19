@@ -14,7 +14,7 @@ subregions= yaml.load(open('cordex_AF_subregions.yaml'))
 # sort the subregion by region names and make a list
 subregions= sorted(subregions.items(),key=operator.itemgetter(0))
 
-cru_pr = local.load_file('/home/huikyole/climate/examples/cordex_AF_paper/cordex_AF_precipitation.nc',
+cru_pr = local.load_file('/home/huikyole/climate/examples/Jinwon_paper/cordex_AF_precipitation.nc',
                                      variable_name = 'CRU', lat_name='lat', lon_name='lon')  
 lat_min = cru_pr.lats.min()
 lat_max = cru_pr.lats.max()

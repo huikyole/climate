@@ -411,6 +411,7 @@ def calc_subregion_area_mean_and_std(dataset_array, subregions):
     else:
        lons = dataset0.lons
        lats = dataset0.lats
+    subregion_array = np.zeros(lons.shape)
     # dataset0.values.shsape[0]: length of the time dimension
     # spatial average
     t_series =ma.zeros([ndata, dataset0.values.shape[0], len(subregions)])
@@ -420,10 +421,11 @@ def calc_subregion_area_mean_and_std(dataset_array, subregions):
     for iregion, subregion in enumerate(subregions):
         lat_min, lat_max, lon_min, lon_max = subregion[1]
         y_index,x_index = np.where((lats >= lat_min) & (lats <= lat_max) & (lons >= lon_min) & (lons <= lon_max))
+        subregion_array[y_index,x_index] = iregion+1
         for idata in np.arange(ndata):
             t_series[idata, :, iregion] = ma.mean(dataset_array[idata].values[:,y_index, x_index], axis=1)
             spatial_std[idata, :, iregion] = ma.std(dataset_array[idata].values[:,y_index, x_index], axis=1)
-    return t_series, spatial_std
+    return t_series, spatial_std, subregion_array
 
 def calc_area_weighted_spatial_average(dataset):
     '''Calculate area weighted average of the values in OCW dataset'''

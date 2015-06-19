@@ -351,7 +351,8 @@ def write_netcdf(dataset, path, compress=True):
 def write_netcdf_multiple_datasets_with_subregions(ref_dataset_array, ref_names, 
                                                    model_dataset_array, model_names,
                                                    path,
-                                                   subregions = None, ref_subregion_mean = None, ref_subregion_std = None, 
+                                                   subregions = None, subregion_array = None,
+                                                   ref_subregion_mean = None, ref_subregion_std = None, 
                                                    model_subregion_mean = None, model_subregion_std = None):
     #Write multiple reference and model datasets and their subregional means and standard deivations in a NetCDF file.
 
@@ -384,16 +385,22 @@ def write_netcdf_multiple_datasets_with_subregions(ref_dataset_array, ref_names,
     times.units = "days since %s" % dataset.times[0]
     times[:] = netCDF4.date2num(dataset.times, times.units)
 
+    mask_array = np.zeros([time_len, lat_len, lon_len])
+    for iobs in np.arange(nobs):
+        index = np.where(ref_dataset_array[iobs].values.mask[:] == True)
+        mask_array[index] = 1
     for iobs in np.arange(nobs):
         out_file.createVariable(ref_names[iobs], 'f8', ('time','y','x'))
-        out_file.variables[ref_names[iobs]][:] = ref_dataset_array[iobs].values[:]
+        out_file.variables[ref_names[iobs]][:] = ma.array(ref_dataset_array[iobs].values, mask = mask_array)
         out_file.variables[ref_names[iobs]].units = ref_dataset_array[iobs].units
     for imodel in np.arange(nmodel):
         out_file.createVariable(model_names[imodel], 'f8', ('time','y','x'))
-        out_file.variables[model_names[imodel]][:] = model_dataset_array[imodel].values[:]
+        out_file.variables[model_names[imodel]][:] = ma.array(model_dataset_array[imodel].values, mask = mask_array)
         out_file.variables[model_names[imodel]].units = model_dataset_array[imodel].units
 
     if not subregions == None:
+        out_file.createVariable('subregion_array', 'i4', ('y','x'))
+        out_file.variables['subregion_array'][:] = subregion_array[:]
         nsubregion = len(subregions)
         out_file.createDimension('nsubregion', nsubregion)
         out_file.createDimension('nobs', nobs)
