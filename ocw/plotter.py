@@ -151,7 +151,7 @@ def _fig_size(gridshape, aspect=None):
     return width, height
 
 def draw_taylor_diagram(fig, rect,results, names, refname, 
-                        ptitle='', legend_font_size=4, pos='best',
+                        ptitle='', legend_font_size=8, pos='best',
                         frameon=False,ncol=1,radmax=1.5):
     ''' Draw a Taylor diagram.
 
@@ -198,7 +198,7 @@ def draw_taylor_diagram(fig, rect,results, names, refname,
     # Create Taylor Diagram object
     dia = TaylorDiagram(1, fig=fig, rect=rect, label=refname, radmax=radmax)
     for i, (stddev, corrcoef) in enumerate(results):
-        dia.add_sample(stddev, corrcoef, marker='$%d$' % (i + 1), ms=6,
+        dia.add_sample(stddev, corrcoef, marker='$%d$' % (i + 1), ms=8,
                        label=names[i])
 
     # Add legend

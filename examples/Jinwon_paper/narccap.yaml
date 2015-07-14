@@ -1,5 +1,5 @@
 workdir: /home/huikyole/climate/examples/Jinwon_paper/
-output_netcdf_filename: narccap_tas.nc
+output_netcdf_filename: narccap_tas_no_mask_for_models.nc
 
 start_time: 1980-01-01
 end_time: 2003-12-31

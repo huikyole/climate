@@ -12,48 +12,8 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.basemap import Basemap 
 import string
 
-def make_axes(parent, **kw): 
+#def make_axes(parent, **kw): 
 # from http://matplotlib.1069221.n5.nabble.com/colorbar-td15992.html
-    orientation = kw.setdefault('orientation', 'vertical') 
-    fraction = kw.pop('fraction', 0.15) 
-    shrink = kw.pop('shrink', 1.0) 
-    aspect = kw.pop('aspect', 20) 
-    pb = parent.get_position(original=True).frozen() 
-    if orientation == 'vertical': 
-        location = kw.pop('location', 1) 
-        pad = kw.pop('pad', 0.05) 
-        if location: 
-            x1 = 1.0-fraction 
-            pb1, pbx, pbcb = pb.splitx(x1-pad, x1) 
-            pbcb = pbcb.shrunk(1.0, shrink).anchored('C', pbcb) 
-            anchor = (0.0, 0.5) 
-            panchor = (1.0, 0.5) 
-        else: 
-            pbcb, pbx, pb1 = pb.splitx(fraction, fraction+pad) 
-            pbcb = pbcb.shrunk(1.0, shrink).anchored('C', pbcb) 
-            anchor = (1.0, 0.5) 
-            panchor = (0.0, 0.5) 
-    else: 
-        location = kw.pop('location', 0) 
-        pad = kw.pop('pad', 0.15) 
-        if location: 
-            y1 = 1.0-fraction 
-            pb1, pbx, pbcb = pb.splity(y1-pad, y1) 
-            pbcb = pbcb.shrunk(shrink, 1.0).anchored('C', pbcb) 
-            anchor = (0.5, 0.0) 
-            panchor = (0.5, 1.0) 
-        else: 
-            pbcb, pbx, pb1 = pb.splity(fraction, fraction+pad) 
-            pbcb = pbcb.shrunk(shrink, 1.0).anchored('C', pbcb) 
-            anchor = (0.5, 1.0) 
-            panchor = (0.5, 0.0) 
-        aspect = 1.0/aspect 
-    parent.set_position(pb1) 
-    parent.set_anchor(panchor) 
-    fig = parent.get_figure() 
-    cax = fig.add_axes(pbcb) 
-    cax.set_aspect(aspect, anchor=anchor, adjustable='box') 
-    return cax, kw 
 
 data_file = '/home/huikyole/climate/examples/Jinwon_paper/narccap_tas.nc'
 
@@ -117,7 +77,6 @@ m.drawcoastlines(linewidth=1)
 m.drawcountries(linewidth=1)
 m.drawstates(linewidth=0.5, color='w')
 max = m.contourf(x,y,obs_dataset.values-273.15,levels =np.arange(7)*5, cmap='RdBu_r')
-#cax, kw = make_axes(ax, orientation='vertical',location=0.0)
 ax.annotate('(a) \n CRU',xy=(-124,25))
 cax = fig.add_axes([0.07, 0.72, 0.01, 0.18])
 plt.colorbar(max, cax = cax) 
