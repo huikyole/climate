@@ -776,7 +776,7 @@ class TaylorDiagram(object):
         ax.axis["top"].label.set_text("Correlation")
 
         ax.axis["left"].set_axis_direction("bottom") # "X axis"
-        ax.axis["left"].label.set_text("Standard deviation")
+        ax.axis["left"].label.set_text("Standard deviation (normalized)")
 
         ax.axis["right"].set_axis_direction("top")   # "Y axis"
         ax.axis["right"].toggle(ticklabels=True)
