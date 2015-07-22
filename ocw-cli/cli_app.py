@@ -19,6 +19,7 @@ import curses
 import sys
 import os
 import numpy as np
+import numpy.ma as ma
 import getpass
 import urllib2
 import json
@@ -610,12 +611,13 @@ def run_screen(model_datasets, models_info, observations_info,
 
              if metric == 'bias':
                   for i in range(len(obs_dataset)):
-                       _, obs_dataset[i].values = utils.calc_climatology_year(obs_dataset[i])
-                       obs_dataset[i].values = np.expand_dims(obs_dataset[i].values, axis=0)
+                       obs_dataset[i].values = utils.calc_temporal_mean(dsp.temporal_subset(month_start=1, month_end=12, target_dataset=obs_dataset[i]))
+                       obs_dataset[i].values = ma.expand_dims(obs_dataset[i].values, axis=0)
 
                   for member, each_target_dataset in enumerate(new_model_datasets):
-                          _, new_model_datasets[member].values = utils.calc_climatology_year(new_model_datasets[member])
-                          new_model_datasets[member].values = np.expand_dims(new_model_datasets[member].values, axis=0)
+                          #_, new_model_datasets[member].values = utils.calc_climatology_year(new_model_datasets[member])
+                          new_model_datasets[member].values = utils.calc_temporal_mean(dsp.temporal_subset(month_start=1, month_end=12, target_dataset=new_model_datasets[member]))
+                          new_model_datasets[member].values = ma.expand_dims(new_model_datasets[member].values, axis=0)
 
                   allNames = []
 
@@ -652,13 +654,18 @@ def run_screen(model_datasets, models_info, observations_info,
                   screen.addstr(9, 4, "Generating plots....")
                   screen.refresh()
                   rcm_bias = evaluation_result.results[:][0]
-                  new_rcm_bias = np.squeeze(np.array(evaluation_result.results))
+                  #new_rcm_bias = np.squeeze(np.array(evaluation_result.results))
+                  new_rcm_bias = evaluation_result.results[0][0]
 
                   if not os.path.exists(working_directory):
                        os.makedirs(working_directory)
 
                   fname = working_directory + 'Bias_contour'
                   plotter.draw_contour_map(new_rcm_bias, new_lats, new_lons, gridshape=(2, 5), fname=fname, subtitles=allNames, cmap='coolwarm_r')
+                  fname = working_directory + 'obs_contour'
+                  plotter.draw_contour_map(obs_dataset[0].values, new_lats, new_lons, gridshape=(2, 5), fname=fname, subtitles=allNames, cmap='coolwarm_r')
+                  fname = working_directory + 'model_contour'
+                  plotter.draw_contour_map(new_model_datasets[0].values,new_lats, new_lons, gridshape=(2, 5), fname=fname, subtitles=allNames, cmap='coolwarm_r')
                   screen.addstr(9, 4, "--> Plots generated.")
                   screen.refresh()
                   screen.addstr(y-2, 1, "Press 'enter' to Exit: ")
@@ -1135,30 +1142,36 @@ def settings_screen(header):
               new_start_time = screen.getstr()
               try:
                    new_start_time = datetime.strptime(new_start_time, '%Y-%m-%d')
-                   new_start_time_int = int("{0}{1}".format(new_start_time.year, new_start_time.month))
-                   fix_min_time_int = int("{0}{1}".format(fix_min_time.year, fix_min_time.month))
-                   fix_max_time_int = int("{0}{1}".format(fix_max_time.year, fix_max_time.month))
-                   all_overlap_end_time_int = int("{0}{1}".format(all_overlap_end_time.year, all_overlap_end_time.month))
-                   if new_start_time_int < fix_min_time_int \
-                   or new_start_time_int > fix_max_time_int \
-                   or new_start_time_int > all_overlap_end_time_int:
-                        note = "Start time has not changed. "
+                   #new_start_time_int = int("{0}{1}".format(new_start_time.year, new_start_time.month))
+                   #fix_min_time_int = int("{0}{1}".format(fix_min_time.year, fix_min_time.month))
+                   #fix_max_time_int = int("{0}{1}".format(fix_max_time.year, fix_max_time.month))
+                   #all_overlap_end_time_int = int("{0}{1}".format(all_overlap_end_time.year, all_overlap_end_time.month))
+                   #if new_start_time_int < fix_min_time_int \
+                   #or new_start_time_int > fix_max_time_int \
+                   #or new_start_time_int > all_overlap_end_time_int:
+                   if new_start_time < fix_min_time \
+                   or new_start_time > fix_max_time \
+                   or new_start_time > all_overlap_end_time:
+                        note = "Start time has not changed."
                    else:
                         all_overlap_start_time = new_start_time
                         note = "Start time has changed successfully. "
               except:
-                   note = "Start time has not changed. "
+                   note = "Start time has not changed."
               screen.addstr(26, x/2, "Enter End Time [max time:{0}] (Format YYYY-MM-DD):".format(fix_max_time))
               new_end_time = screen.getstr()
               try:
                    new_end_time = datetime.strptime(new_end_time, '%Y-%m-%d')
-                   new_end_time_int = int("{0}{1}".format(new_end_time.year, new_end_time.month))
-                   fix_min_time_int = int("{0}{1}".format(fix_min_time.year, fix_min_time.month))
-                   fix_max_time_int = int("{0}{1}".format(fix_max_time.year, fix_max_time.month))
-                   all_overlap_start_time_int = int("{0}{1}".format(all_overlap_start_time.year, all_overlap_start_time.month))
-                   if new_end_time_int > fix_max_time_int \
-                   or new_end_time_int < fix_min_time_int \
-                   or new_end_time_int < all_overlap_start_time_int:
+                   #new_end_time_int = int("{0}{1}".format(new_end_time.year, new_end_time.month))
+                   #fix_min_time_int = int("{0}{1}".format(fix_min_time.year, fix_min_time.month))
+                   #fix_max_time_int = int("{0}{1}".format(fix_max_time.year, fix_max_time.month))
+                   #all_overlap_start_time_int = int("{0}{1}".format(all_overlap_start_time.year, all_overlap_start_time.month))
+                   #if new_end_time_int > fix_max_time_int \
+                   #or new_end_time_int < fix_min_time_int \
+                   #or new_end_time_int < all_overlap_start_time_int:
+                   if new_end_time > fix_max_time \
+                   or new_end_time < fix_min_time \
+                   or new_end_time < all_overlap_start_time:
                         note = note + " End time has not changed. "
                    else:
                         all_overlap_end_time = new_end_time
