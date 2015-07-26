@@ -6,6 +6,7 @@ from ocw.dataset import Bounds
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
 import numpy as np
+import numpy.ma as ma
 import yaml
 from glob import glob
 import operator
@@ -77,6 +78,19 @@ for idata,dataset in enumerate(ref_datasets):
     ref_datasets[idata] = dsp.spatial_regrid(dataset, new_lat, new_lon)
 for idata,dataset in enumerate(model_datasets):
     model_datasets[idata] = dsp.spatial_regrid(dataset, new_lat, new_lon)
+print 'Masking data over ocean'
+mask_array = np.zeros(ref_datasets[0].values.shape)
+for obs in ref_datasets:
+    index = np.where(obs.values.mask[:] == True)
+    mask_array[index] = 1
+for model in model_datasets:
+    index = np.where(model.values.mask[:] == True)
+    if index[0].size > 0:
+        mask_array[index] = 1
+for obs in ref_datasets:
+    obs.values = ma.array(obs.values, mask=mask_array)
+for model in model_datasets:
+    model.values = ma.array(model.values, mask=mask_array)
 
 """ Step 5: Generate subregion average and standard deviation """
 # sort the subregion by region names and make a list

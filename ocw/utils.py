@@ -412,6 +412,7 @@ def calc_subregion_area_mean_and_std(dataset_array, subregions):
        lons = dataset0.lons
        lats = dataset0.lats
     subregion_array = np.zeros(lons.shape)
+    mask_array = dataset_array[0].values[0,:].mask
     # dataset0.values.shsape[0]: length of the time dimension
     # spatial average
     t_series =ma.zeros([ndata, dataset0.values.shape[0], len(subregions)])
@@ -425,6 +426,7 @@ def calc_subregion_area_mean_and_std(dataset_array, subregions):
         for idata in np.arange(ndata):
             t_series[idata, :, iregion] = ma.mean(dataset_array[idata].values[:,y_index, x_index], axis=1)
             spatial_std[idata, :, iregion] = ma.std(dataset_array[idata].values[:,y_index, x_index], axis=1)
+    subregion_array = ma.array(subregion_array, mask=mask_array) 
     return t_series, spatial_std, subregion_array
 
 def calc_area_weighted_spatial_average(dataset):
