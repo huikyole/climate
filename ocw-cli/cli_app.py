@@ -36,7 +36,8 @@ from ocw.dataset import Bounds
 from ocw.data_source.local import load_file
 import ocw.utils as utils
 import ocw.data_source.esgf as esgf
-from ocw_config_runner.configuration_writer import export_evaluation_to_config
+#from ocw_config_runner.configuration_writer import export_evaluation_to_config
+from configuration_writer import export_evaluation_to_config
 
 import ssl
 if hasattr(ssl, '_create_unverified_context'):
@@ -116,7 +117,7 @@ def load_local_model_screen(header):
                    note = "WARNING: Model file cannot be added."
               elif answer == "1":
                    model_dataset = load_file(model_path, variable_name)
-                   model_datasets.append(model_dataset)
+                   model_datasets.append(dsp.normalize_dataset_datetimes(model_dataset, model_dataset.temporal_resolution()))
                    models_info.append({'directory': model_path, 'variable_name': variable_name})
                    note = "Model file successfully added."
               else:
@@ -560,11 +561,12 @@ def run_screen(model_datasets, models_info, observations_info,
              obs_dataset = []
              for i in range(len(observations_info)):
                   if observations_info[i]['dataset_id'] == "esgf":
-                      obs_dataset.append(load_file(observations_info[i]['database'], observations_info[i]['parameter_id']))
+                      original_dataset = load_file(observations_info[i]['database'], observations_info[i]['parameter_id'])
+                      obs_dataset.append(dsp.normalize_dataset_datetimes(original_dataset,original_dataset.temporal_resolution()))
                   else:
                       dataset_id = int(observations_info[i]['dataset_id'])
                       parameter_id = int(observations_info[i]['parameter_id'])
-                      obs_dataset.append(rcmed.parameter_dataset(
+                      original_dataset = rcmed.parameter_dataset(
                           dataset_id,
                           parameter_id,
                           overlap_min_lat,
@@ -572,7 +574,9 @@ def run_screen(model_datasets, models_info, observations_info,
                           overlap_min_lon,
                           overlap_max_lon,
                           overlap_start_time,
-                          overlap_end_time))
+                          overlap_end_time)
+                      obs_dataset.append(dsp.normalize_dataset_datetimes(original_dataset,original_dataset.temporal_resolution()))
+                          
 
              screen.addstr(4, 4, "--> Data retrieved.")
              screen.refresh()
@@ -610,13 +614,19 @@ def run_screen(model_datasets, models_info, observations_info,
              screen.addstr(6, 4, "--> Spatially regridded.")
              screen.refresh()
 
+             masked_dataset = dsp.mask_missing_data(obs_dataset + new_model_datasets) 
+             obs_dataset = masked_dataset[0:len(obs_dataset)]
+             new_model_dataset = masked_dataset[len(obs_dataset):]
+
              if metric == 'bias':
                   for i in range(len(obs_dataset)):
+                       obs_dataset[i] = dsp.variable_unit_conversion(obs_dataset[i])
                        obs_dataset[i].values = utils.calc_temporal_mean(dsp.temporal_subset(month_start=1, month_end=12, target_dataset=obs_dataset[i]))
                        obs_dataset[i].values = ma.expand_dims(obs_dataset[i].values, axis=0)
 
                   for member, each_target_dataset in enumerate(new_model_datasets):
                           #_, new_model_datasets[member].values = utils.calc_climatology_year(new_model_datasets[member])
+                          new_model_datasets[member] = dsp.variable_unit_conversion(new_model_datasets[member])
                           new_model_datasets[member].values = utils.calc_temporal_mean(dsp.temporal_subset(month_start=1, month_end=12, target_dataset=new_model_datasets[member]))
                           new_model_datasets[member].values = ma.expand_dims(new_model_datasets[member].values, axis=0)
 
@@ -648,7 +658,7 @@ def run_screen(model_datasets, models_info, observations_info,
                             targets.append(new_model_datasets[int(target[-1])])
 
                   evaluation_result = evaluation.Evaluation(reference, targets, [mean_bias])
-                  export_evaluation_to_config(evaluation_result)
+                  #export_evaluation_to_config(evaluation_result)
                   evaluation_result.run()
                   screen.addstr(8, 4, "--> Evaluation Finished.")
                   screen.refresh()

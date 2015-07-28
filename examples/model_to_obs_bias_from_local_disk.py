@@ -28,27 +28,34 @@ import ocw.dataset_processor as dsp
 import ocw.evaluation as evaluation
 import ocw.metrics as metrics
 import ocw.plotter as plotter
+import ocw.utils as utils
 
-# File URL leader
-FILE_LEADER = "http://zipper.jpl.nasa.gov/dist/"
-# This way we can easily adjust the time span of the retrievals
-YEARS = 3
-# Two Local Model Files 
-MODEL = "AFRICA_KNMI-RACMO2.2b_CTL_ERAINT_MM_50km_1989-2008_tasmax.nc"
+# Season 
+# ex) MONTH_START =1 & MONTH_END=12 : annual mean bias
+# ex) MONTH_START =12 & MONTH_END=2 : DJF mean bias
+MONTH_START = 1
+MONTH_END = 12
+# Two Local Files 
+MODEL = "/nas/share4-cf/jinwonki/data/cordex-af/AFRICA_IES-CCLM_CTL_ERAINT_MM_50km_1989-2008_pr.nc"
+CRU="/nas/share1-hp/jinwonki/data/obs/cru3.1/d/GLOBAL_CRU_CTL_CRU-TS31_MM_0.5deg_1901-2009_pr.nc"  # reference observation
 # Filename for the output image/plot (without file extension)
-OUTPUT_PLOT = "cru_31_tmax_knmi_africa_bias_full"
+OUTPUT_PLOT = "cru_31_pr_knmi_africa_bias_annual"
 
 # Download necessary NetCDF file if not present
-if path.exists(MODEL):
-    pass
-else:
-    urllib.urlretrieve(FILE_LEADER + MODEL, MODEL)
+#if path.exists(MODEL):
+#    pass
+#else:
+#    urllib.urlretrieve(FILE_LEADER + MODEL, MODEL)
 
 """ Step 1: Load Local NetCDF File into OCW Dataset Objects """
 print("Loading %s into an OCW Dataset Object" % (MODEL,))
-knmi_dataset = local.load_file(MODEL, "tasmax")
+knmi_dataset = local.load_file(MODEL, "pr")
 print("KNMI_Dataset.values shape: (times, lats, lons) - %s \n" % (knmi_dataset.values.shape,))
+cru31_dataset = local.load_file(CRU, "pr")
+print("CRU_Dataset.values shape: (times, lats, lons) - %s \n" % (knmi_dataset.values.shape,))
 
+
+'''
 """ Step 2: Fetch an OCW Dataset Object from the data_source.rcmed module """
 print("Working with the rcmed interface to get CRU3.1 Daily-Max Temp")
 metadata = rcmed.get_parameters_metadata()
@@ -66,6 +73,7 @@ The first two required params are in the cru_31 variable we defined earlier
 # Must cast to int since the rcmed api requires ints
 dataset_id = int(cru_31['dataset_id'])
 parameter_id = int(cru_31['parameter_id'])
+'''
 
 print("We are going to use the Model to constrain the Spatial Domain")
 #  The spatial_boundaries() function returns the spatial extent of the dataset
@@ -77,46 +85,38 @@ min_lat, max_lat, min_lon, max_lon = knmi_dataset.spatial_boundaries()
 
 print("Calculating the Maximum Overlap in Time for the datasets")
 
-cru_start = datetime.datetime.strptime(cru_31['start_date'], "%Y-%m-%d")
-cru_end = datetime.datetime.strptime(cru_31['end_date'], "%Y-%m-%d")
+cru31_dataset = dsp.normalize_dataset_datetimes(cru31_dataset, 'monthly')
+knmi_dataset = dsp.normalize_dataset_datetimes(knmi_dataset, 'monthly')
+cru_start, cru_end = cru31_dataset.time_range()
 knmi_start, knmi_end = knmi_dataset.time_range()
 # Grab the Max Start Time
 start_time = max([cru_start, knmi_start])
 # Grab the Min End Time
 end_time = min([cru_end, knmi_end])
-print("Overlap computed to be: %s to %s" % (start_time.strftime("%Y-%m-%d"),
-                                          end_time.strftime("%Y-%m-%d")))
-print("We are going to grab the first %s year(s) of data" % YEARS)
-end_time = datetime.datetime(start_time.year + YEARS, start_time.month, start_time.day)
-print("Final Overlap is: %s to %s" % (start_time.strftime("%Y-%m-%d"),
-                                          end_time.strftime("%Y-%m-%d")))
+print("Overlap computed to be: %s to %s" % (start_time.strftime("%Y-%m"),
+                                          end_time.strftime("%Y-%m")))
 
-print("Fetching data from RCMED...")
-cru31_dataset = rcmed.parameter_dataset(dataset_id,
-                                        parameter_id,
-                                        min_lat,
-                                        max_lat,
-                                        min_lon,
-                                        max_lon,
-                                        start_time,
-                                        end_time)
 
 """ Step 3: Resample Datasets so they are the same shape """
 print("CRU31_Dataset.values shape: (times, lats, lons) - %s" % (cru31_dataset.values.shape,))
 print("KNMI_Dataset.values shape: (times, lats, lons) - %s" % (knmi_dataset.values.shape,))
-print("Our two datasets have a mis-match in time. We will subset on time to %s years\n" % YEARS)
 
 # Create a Bounds object to use for subsetting
 new_bounds = Bounds(min_lat, max_lat, min_lon, max_lon, start_time, end_time)
+cru31_dataset = dsp.subset(new_bounds, cru31_dataset)
 knmi_dataset = dsp.subset(new_bounds, knmi_dataset)
+
+# Temporaly subset both observation and model datasets
+cru31_dataset = dsp.temporal_subset(MONTH_START, MONTH_END, cru31_dataset)
+knmi_dataset = dsp.temporal_subset(MONTH_START, MONTH_END, knmi_dataset)
 
 print("CRU31_Dataset.values shape: (times, lats, lons) - %s" % (cru31_dataset.values.shape,))
 print("KNMI_Dataset.values shape: (times, lats, lons) - %s \n" % (knmi_dataset.values.shape,))
 
 print("Temporally Rebinning the Datasets to a Single Timestep")
-# To run FULL temporal Rebinning use a timedelta > 366 days.  I used 999 in this example
-knmi_dataset = dsp.temporal_rebin(knmi_dataset, datetime.timedelta(days=999))
-cru31_dataset = dsp.temporal_rebin(cru31_dataset, datetime.timedelta(days=999))
+# Temporaly subset both observation and model datasets
+cru31_dataset = dsp.temporal_subset(MONTH_START, MONTH_END, cru31_dataset)
+knmi_dataset = dsp.temporal_subset(MONTH_START, MONTH_END, knmi_dataset)
 
 print("KNMI_Dataset.values shape: %s" % (knmi_dataset.values.shape,))
 print("CRU31_Dataset.values shape: %s \n\n" % (cru31_dataset.values.shape,))
@@ -134,12 +134,23 @@ cru31_dataset = dsp.spatial_regrid(cru31_dataset, new_lats, new_lons)
 print("Final shape of the KNMI_Dataset:%s" % (knmi_dataset.values.shape, ))
 print("Final shape of the CRU31_Dataset:%s" % (cru31_dataset.values.shape, ))
  
-""" Step 4:  Build a Metric to use for Evaluation - Bias for this example """
+""" Step 5: Checking grid pointw with missing data from observation and models."""
+cru31_dataset, knmi_dataset = dsp.mask_missing_data([cru31_dataset, knmi_dataset])
+
+""" Step 6: Calculate seasonal mean climatology """
+cru31_dataset.values = utils.calc_temporal_mean(cru31_dataset)
+knmi_dataset.values = utils.calc_temporal_mean(knmi_dataset)
+
+""" Step 7: Checking and converting variable units """
+cru31_dataset = dsp.variable_unit_conversion(cru31_dataset)
+knmi_dataset = dsp.variable_unit_conversion(knmi_dataset)
+
+""" Step 8:  Build a Metric to use for Evaluation - Bias for this example """
 # You can build your own metrics, but OCW also ships with some common metrics
 print("Setting up a Bias metric to use for evaluation")
 bias = metrics.Bias()
 
-""" Step 5: Create an Evaluation Object using Datasets and our Metric """
+""" Step 9: Create an Evaluation Object using Datasets and our Metric """
 # The Evaluation Class Signature is:
 # Evaluation(reference, targets, metrics, subregions=None)
 # Evaluation can take in multiple targets and metrics, so we need to convert
@@ -149,7 +160,7 @@ bias_evaluation = evaluation.Evaluation(knmi_dataset, [cru31_dataset], [bias])
 print("Executing the Evaluation using the object's run() method")
 bias_evaluation.run()
  
-""" Step 6: Make a Plot from the Evaluation.results """
+""" Step 10: Make a Plot from the Evaluation.results """
 # The Evaluation.results are a set of nested lists to support many different
 # possible Evaluation scenarios.
 #
@@ -167,8 +178,8 @@ lats = new_lats
 lons = new_lons
 fname = OUTPUT_PLOT
 gridshape = (1, 1)  # Using a 1 x 1 since we have a single Bias for the full time range
-plot_title = "TASMAX Bias of KNMI Compared to CRU 3.1 (%s - %s)" % (start_time.strftime("%Y/%d/%m"), end_time.strftime("%Y/%d/%m"))
-sub_titles = ["Full Temporal Range"]
+plot_title = "PR Bias of KNMI Compared to CRU 3.1 (%s - %s)" % (start_time.strftime("%Y"), end_time.strftime("%Y"))
+sub_titles = ["start month %02d - end month %02d" %(MONTH_START, MONTH_END)]
  
 plotter.draw_contour_map(results, lats, lons, fname,
                          gridshape=gridshape, ptitle=plot_title, 
