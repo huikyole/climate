@@ -127,7 +127,11 @@ class StdDevRatio(BinaryMetric):
 
         :returns: The standard deviation ratio of the reference and target
         '''
+<<<<<<< HEAD
         return ma.std(target_dataset.values) / ma.std(ref_dataset.values)
+=======
+        return ma.std(target_dataset.values)/ma.std(ref_dataset.values)
+>>>>>>> 88d9c22e657e06be31470da69f9b3b9d8f085d6e
 
 
 class PatternCorrelation(BinaryMetric):
@@ -240,7 +244,11 @@ class SpatialMeanOfTemporalMeanBias(BinaryMetric):
         '''
 
         bias = target_dataset.values - reference_dataset.values 
+<<<<<<< HEAD
         return ma.mean(bias) 
+=======
+        return ma.mean(bias)
+>>>>>>> 88d9c22e657e06be31470da69f9b3b9d8f085d6e
 
 
 class RMSError(BinaryMetric):

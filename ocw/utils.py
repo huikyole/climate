@@ -25,6 +25,7 @@ import datetime
 
 from mpl_toolkits.basemap import shiftgrid
 from dateutil.relativedelta import relativedelta
+from netCDF4 import num2date
 
 def decode_time_values(dataset, time_var_name):
     ''' Decode NetCDF time values into Python datetime objects.
@@ -56,10 +57,18 @@ def decode_time_values(dataset, time_var_name):
         for time_val in time_data:
             times.append((time_base + relativedelta(months=int(time_val))).replace(day=1))
     else:
+<<<<<<< HEAD
         for time_val in time_data:
             arg[time_units] = time_val
             times.append((time_base + dt.timedelta(**arg)).replace(day=1))
+=======
+        try:
+            times_calendar = time_data.calendar
+        except:
+            times_calendar = 'standard'
+>>>>>>> 88d9c22e657e06be31470da69f9b3b9d8f085d6e
 
+        times = num2date(time_data[:], units=time_format, calendar=times_calendar)
     return times
 
 def parse_time_units(time_format):
@@ -116,6 +125,7 @@ def parse_time_base(time_format):
         '%Y/%m/%d%H:%M:%S', '%Y-%m-%d %H:%M', '%Y/%m/%d %H:%M',
         '%Y:%m:%d %H:%M', '%Y%m%d %H:%M', '%Y-%m-%d', '%Y/%m/%d',
         '%Y:%m:%d', '%Y%m%d', '%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%d %H',
+	'%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%SZ'
     ]
 
     # Attempt to match the base time string with a possible format parsing string.
@@ -258,6 +268,16 @@ def reshape_monthly_to_annually(dataset):
 
     return values
 
+def calc_temporal_mean(dataset):
+    ''' Calculate temporal mean of dataset's values 
+
+    :param dataset: OCW Dataset whose first dimension is time 
+    :type dataset: :class:`dataset.Dataset`
+
+    :returns: Mean values averaged for the first dimension (time)
+    '''
+    return ma.mean(dataset.values, axis=0)
+
 def calc_climatology_year(dataset):
     ''' Calculate climatology of dataset's values for each year
     
@@ -285,40 +305,6 @@ def calc_climatology_year(dataset):
         total_mean = ma.mean(annually_mean, axis=0)
 
     return annually_mean, total_mean
-
-def calc_climatology_season(month_start, month_end, dataset):
-    ''' Calculate seasonal mean and time series for given months.
-    
-    :param month_start: An integer for beginning month (Jan=1)
-    :type month_start: :class:`int`
-
-    :param month_end: An integer for ending month (Jan=1)
-    :type month_end: :class:`int`
-
-    :param dataset: Dataset object with full-year format
-    :type dataset: :class:`dataset.Dataset`
-
-    :returns: t_series - monthly average over the given season
-        means - mean over the entire season
-        
-    '''
-
-    if month_start > month_end:
-        # Offset the original array so that the the first month
-        # becomes month_start, note that this cuts off the first year of data
-        offset = slice(month_start - 1, month_start - 13)
-        reshape_data = reshape_monthly_to_annually(dataset[offset])
-        month_index = slice(0, 13 - month_start + month_end)
-    else:
-        # Since month_start <= month_end, just take a slice containing those months
-        reshape_data = reshape_monthly_to_annually(dataset)
-        month_index = slice(month_start - 1, month_end)
-    
-    t_series = reshape_data[:, month_index].mean(axis=1)
-    means = t_series.mean(axis=0)
-    
-    return t_series, means
-
 
 def calc_climatology_monthly(dataset):
     ''' Calculate monthly mean values for a dataset.

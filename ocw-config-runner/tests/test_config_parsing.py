@@ -290,6 +290,36 @@ class TestConfigIsWellFormed(unittest.TestCase):
         """
         bad_plot = yaml.load(bad_plot_config)
 
+        bad_subregion_config_type = """
+            datasets:
+                reference:
+                    data_source: dap
+                    url: afakeurl.com
+                    variable: pr
+
+            metrics:
+                - Bias
+
+            subregions:
+                - this is a string instead of a list
+        """
+        self.bad_subregion_type = yaml.load(bad_subregion_config_type)
+
+        bad_subregion_config_length = """
+            datasets:
+                reference:
+                    data_source: dap
+                    url: afakeurl.com
+                    variable: pr
+
+            metrics:
+                - Bias
+
+            subregions:
+                - [1, 2, 3, 4, 5]
+        """
+        self.bad_subregion_length = yaml.load(bad_subregion_config_length)
+
     def test_malformed_reference_config(self):
         ret = parser._config_is_well_formed(self.malformed_reference_conf)
         self.assertFalse(ret)
@@ -319,6 +349,14 @@ class TestConfigIsWellFormed(unittest.TestCase):
 
     def test_bad_plot_config(self):
         ret = parser._config_is_well_formed(self.missing_metric_name)
+        self.assertFalse(ret)
+    
+    def test_bad_subregion_type(self):
+        ret = parser._config_is_well_formed(self.bad_subregion_type)
+        self.assertFalse(ret)
+
+    def test_bad_subregion_length(self):
+        ret = parser._config_is_well_formed(self.bad_subregion_length)
         self.assertFalse(ret)
 
 
@@ -644,6 +682,53 @@ class ContourMapConfig(unittest.TestCase):
         mock_logger.error.assert_called_with(err)
 
 
+class TestSubregionPlotConfig(unittest.TestCase):
+    @classmethod
+    def setUpClass(self):
+        valid_subregion_config = """
+            type: subregion
+            lats:
+                range_min: -20
+                range_max: 20
+                range_step: 1
+            lons:
+                range_min: -20
+                range_max: 20
+                range_step: 1
+            output_name: fake_plot_name
+        """
+        self.valid_subregion = yaml.load(valid_subregion_config)
+
+        missing_keys_subregion_config = """
+            type: subregion
+        """
+        self.missing_keys_subregion = yaml.load(missing_keys_subregion_config)
+
+        self.required_subregion_keys = set([
+            'lats',
+            'lons',
+            'output_name'
+        ])
+
+    def test_valid_subregion(self):
+        ret = parser._valid_plot_config_data(self.valid_subregion)
+        self.assertTrue(ret)
+
+    @patch('configuration_parsing.logger')
+    def test_missing_keys_subregion(self, mock_logger):
+        ret = parser._valid_plot_config_data(self.missing_keys_subregion)
+
+        present_keys = set(self.missing_keys_subregion.keys())
+        missing_keys = self.required_subregion_keys - present_keys
+        missing = sorted(list(missing_keys))
+
+        err = (
+            'Plot config does not contain required keys. '
+            'The following keys are missing: {}'
+        ).format(', '.join(missing))
+        mock_logger.error.assert_called_with(err)
+
+
 class TestInvalidPlotConfig(unittest.TestCase):
     @classmethod
     def setUpClass(self):
@@ -667,6 +752,29 @@ class TestInvalidPlotConfig(unittest.TestCase):
         """
         self.missing_plot_type = yaml.load(missing_plot_type_config)
 
+        missing_subregions_for_plot_type = """
+            datasets:
+                - blah
+
+            metrics:
+                - blah
+            
+            plots:
+                - type: subregion
+                  results_indices:
+                      - !!python/tuple [0, 0]
+                  lats:
+                      range_min: -20
+                      range_max: 20
+                      range_step: 1
+                  lons:
+                      range_min: -20
+                      range_max: 20
+                      range_step: 1
+                  output_name: wrf_bias_compared_to_knmi
+        """
+        self.missing_subregions = yaml.load(missing_subregions_for_plot_type)
+
     @patch('configuration_parsing.logger')
     def test_invalid_plot_type(self, mock_logger):
         ret = parser._valid_plot_config_data(self.bad_plot_type)
@@ -683,4 +791,16 @@ class TestInvalidPlotConfig(unittest.TestCase):
 
         mock_logger.error.assert_called_with(
             'Plot config does not include a type attribute.'
+        )
+        
+    @patch('configuration_parsing.logger')
+    def test_missing_subregion(self, mock_logger):
+        ret = parser._config_is_well_formed(self.missing_subregions)
+        self.assertFalse(ret)
+
+        mock_logger.error.assert_called_with(
+            'Plot config that requires subregion information is present '
+            'in a config file without adequate subregion information '
+            'provided. Please ensure that you have properly supplied 1 or '
+            'more subregion config values.'
         )

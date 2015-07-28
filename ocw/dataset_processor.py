@@ -29,7 +29,54 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def temporal_rebin(target_dataset, temporal_resolution):
+def temporal_subset(month_start, month_end, target_dataset):
+    """ Temporally subset data given month_index.
+
+    :param month_start: An integer for beginning month (Jan=1)
+    :type month_start: :class:`int`
+
+    :param month_end: An integer for ending month (Jan=1)
+    :type month_end: :class:`int`
+
+    :param target_dataset: Dataset object that needs temporal subsetting
+    :type target_dataset: Open Climate Workbench Dataset Object
+
+    :returns: A temporal subset OCW Dataset
+    :rtype: Open Climate Workbench Dataset Object
+    """
+
+    if month_start > month_end:
+        month_index = range(month_start,13)
+        month_index.extend(range(1, month_end+1))
+    else:
+        month_index = range(month_start, month_end+1)
+
+    dates = target_dataset.times
+    months = np.array([d.month for d in dates])
+    time_index = []
+    for m_value in month_index:
+        time_index = np.append(time_index, np.where(months == m_value)[0])
+        if m_value == month_index[0]:
+            time_index_first = np.min(np.where(months == m_value)[0])
+        if m_value == month_index[-1]:
+            time_index_last = np.max(np.where(months == m_value)[0])
+
+    time_index = np.sort(time_index)
+
+    time_index = time_index[np.where((time_index >= time_index_first) & (time_index <= time_index_last))]
+
+    time_index = list(time_index)
+
+    new_dataset = ds.Dataset(target_dataset.lats,
+                             target_dataset.lons,
+                             target_dataset.times[time_index],
+                             target_dataset.values[time_index,:],
+                             variable=target_dataset.variable,
+                             units=target_dataset.units, 
+                             name=target_dataset.name)
+    return new_dataset
+
+def temporal_rebin(target_dataset, temporal_resolution):     
     """ Rebin a Dataset to a new temporal resolution
     
     :param target_dataset: Dataset object that needs temporal rebinned
@@ -429,7 +476,7 @@ def water_flux_unit_conversion(dataset):
     :returns: A Dataset with values converted to new units.
     :rtype: :class:`dataset.Dataset`
     '''
-    waterFluxVariables = ['pr', 'evspsbl', 'mrro', 'swe']
+    waterFluxVariables = ['pr', 'prec','evspsbl', 'mrro', 'swe']
     variable = dataset.variable.lower()
 
     if any(subString in variable for subString in waterFluxVariables):
@@ -446,6 +493,64 @@ def water_flux_unit_conversion(dataset):
 
     return dataset
 
+def variable_unit_conversion(dataset):
+    ''' Convert water flux or temperature variables units as necessary
+
+    For water flux variables, convert full SI units water flux units to more common units.
+    For temperature, convert Celcius to Kelvin.
+
+    :param dataset: The dataset to convert.
+    :type dataset: :class:`dataset.Dataset`
+
+    :returns: A Dataset with values converted to new units.
+    :rtype: :class:`dataset.Dataset`
+    '''
+
+    water_flux_variables = ['pr', 'prec','evspsbl', 'mrro', 'swe']
+    variable = dataset.variable.lower()
+
+    if any(subString in variable for subString in water_flux_variables):
+        dataset_units = dataset.units.lower()
+        if variable in 'swe':
+            if any(unit in dataset_units for unit in ['m', 'meter']):
+                dataset.values = 1.e3 * dataset.values
+                dataset.units = 'km'
+        else:
+            if any(unit in dataset_units
+                for unit in ['kg m-2 s-1', 'mm s-1', 'mm/sec']):
+                dataset.values = 86400. * dataset.values
+                dataset.units = 'mm/day'
+
+    temperature_flux_variables = ['temperature','tas','tasmax','taxmin','T']
+    variable = dataset.variable.lower()
+
+    if any(subString in variable for subString in temperature_flux_variables):
+        dataset_units = dataset.units.lower()
+        if dataset_units == 'c':
+            dataset.values = 273.15+dataset.values
+            dataset.units = 'K'
+
+    return dataset    
+
+def mask_missing_data(dataset_array):
+    ''' Check missing values in observation and model datasets.
+
+    If any of dataset in dataset_array has missing values at a grid point, 
+    the values at the grid point in all other datasets are masked. 
+
+    :param dataset_array: an array of OCW datasets
+    '''
+
+    mask_array = np.zeros(dataset_array[0].values.shape)
+    for dataset in dataset_array:
+        index = np.where(dataset.values.mask == True) 
+        if index[0].size >0:
+            mask_array[index] = 1
+    masked_array = []
+    for dataset in dataset_array:
+        dataset.values = ma.array(dataset.values, mask=mask_array)
+        masked_array.append(dataset)  
+    return [masked_dataset for masked_dataset in masked_array]
 
 def _rcmes_normalize_datetimes(datetimes, timestep):
     """ Normalize Dataset datetime values.
