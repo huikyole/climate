@@ -1,12 +1,26 @@
 workdir: /home/huikyole/climate/examples/Jinwon_paper/
-output_netcdf_filename: narccap_tas.nc
+output_netcdf_filename: narccap_tas_annual_mean_1980-2003.nc
 
-start_time: 1980-01-01
-end_time: 2003-12-31
+# (RCMES will temporally subset data between month_start and month_end. If average_each_year is True (False), seasonal mean in each year is (not) calculated and used for metrics calculation.)
+time:
+    maximum_overlap_period: False
+    start_time: 1980-01-01
+    end_time: 2003-12-31
+    temporal_resolution: monthly
+    month_start: 1
+    month_end: 12
+    average_each_year: True
+
+space:
+    min_lat: 23.75
+    max_lat: 49.75
+    min_lon: -125.75
+    max_lon: -66.75
 
 regrid:
-    spatial_regrid_lats: !!python/tuple [23.75, 49.75, 0.50]
-    spatial_regrid_lons: !!python/tuple [-125.75,-66.75, 0.50]
+    regrid_on_reference: False
+    regrid_dlat: 0.50
+    regrid_dlon: 0.50
 
 datasets:
     reference:
@@ -20,6 +34,13 @@ datasets:
         path: /share4/jinwonki/data/narccap/mon/temp*.nc                                                    
         variable: temp    
 
+metrics:
+    name: bias_of_multiyear_climatology
+
+plots:
+    file_name: narccap_tas_annual_mean_bias_to_cru
+    subplots_array: !!python/tuple [4,2] 
+ 
 subregions:
 #subregion name (R01, R02, R03,....) followed by an array of boundaries [south, north, west, east]
     R01: 

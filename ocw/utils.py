@@ -420,3 +420,16 @@ def calc_area_weighted_spatial_average(dataset):
     weights = np.cos(lats*np.pi/180.) 
     return ma.average(dataset.values, weights = weights)
 
+def get_temporal_overlap(dataset_array):
+    ''' Find the maximum temporal overlap across the observation and model datasets
+
+    :param dataset_array: an array of OCW datasets
+    '''
+    start_time =[]
+    end_time =[]
+    for dataset in dataset_array:
+        start_time.append(dataset.time_range()[0])
+        end_time.append(dataset.time_range()[1])
+
+    return np.max(start_time), np.min(end_time)
+

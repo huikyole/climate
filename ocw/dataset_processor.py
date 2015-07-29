@@ -421,7 +421,7 @@ def write_netcdf(dataset, path, compress=True):
 
     out_file.close()
 
-def write_netcdf_multiple_datasets_with_subregions(ref_dataset_array, ref_names, 
+def write_netcdf_multiple_datasets_with_subregions(ref_dataset, ref_name, 
                                                    model_dataset_array, model_names,
                                                    path,
                                                    subregions = None, subregion_array = None,
@@ -433,9 +433,9 @@ def write_netcdf_multiple_datasets_with_subregions(ref_dataset_array, ref_names,
     #
     out_file = netCDF4.Dataset(path, 'w', format='NETCDF4')
 
-    dataset = ref_dataset_array[0]
+    dataset = ref_dataset
     # Set attribute lenghts
-    nobs = len(ref_dataset_array)
+    nobs = 1
     nmodel = len(model_dataset_array)
     lat_len = len(dataset.lats)
     lon_len = len(dataset.lons)
@@ -462,11 +462,9 @@ def write_netcdf_multiple_datasets_with_subregions(ref_dataset_array, ref_names,
     #for iobs in np.arange(nobs):
     #    index = np.where(ref_dataset_array[iobs].values.mask[:] == True)
     #    mask_array[index] = 1
-    for iobs in np.arange(nobs):
-        out_file.createVariable(ref_names[iobs], 'f8', ('time','y','x'))
-        #out_file.variables[ref_names[iobs]][:] = ma.array(ref_dataset_array[iobs].values, mask = mask_array)
-        out_file.variables[ref_names[iobs]][:] = ref_dataset_array[iobs].values
-        out_file.variables[ref_names[iobs]].units = ref_dataset_array[iobs].units
+    out_file.createVariable(ref_name, 'f8', ('time','y','x'))
+    out_file.variables[ref_name][:] = ref_dataset.values
+    out_file.variables[ref_name].units = ref_dataset.units
     for imodel in np.arange(nmodel):
         out_file.createVariable(model_names[imodel], 'f8', ('time','y','x'))
         #out_file.variables[model_names[imodel]][:] = ma.array(model_dataset_array[imodel].values, mask = mask_array)
@@ -518,65 +516,6 @@ def water_flux_unit_conversion(dataset):
                 dataset.units = 'mm/day'
 
     return dataset
-
-def variable_unit_conversion(dataset):
-    ''' Convert water flux or temperature variables units as necessary
-
-    For water flux variables, convert full SI units water flux units to more common units.
-    For temperature, convert Celcius to Kelvin.
-
-    :param dataset: The dataset to convert.
-    :type dataset: :class:`dataset.Dataset`
-
-    :returns: A Dataset with values converted to new units.
-    :rtype: :class:`dataset.Dataset`
-    '''
-
-    water_flux_variables = ['pr', 'prec','evspsbl', 'mrro', 'swe']
-    variable = dataset.variable.lower()
-
-    if any(subString in variable for subString in water_flux_variables):
-        dataset_units = dataset.units.lower()
-        if variable in 'swe':
-            if any(unit in dataset_units for unit in ['m', 'meter']):
-                dataset.values = 1.e3 * dataset.values
-                dataset.units = 'km'
-        else:
-            if any(unit in dataset_units
-                for unit in ['kg m-2 s-1', 'mm s-1', 'mm/sec']):
-                dataset.values = 86400. * dataset.values
-                dataset.units = 'mm/day'
-
-    temperature_flux_variables = ['temperature','tas','tasmax','taxmin','T']
-    variable = dataset.variable.lower()
-
-    if any(subString in variable for subString in temperature_flux_variables):
-        dataset_units = dataset.units.lower()
-        if dataset_units == 'c':
-            dataset.values = 273.15+dataset.values
-            dataset.units = 'K'
-
-    return dataset    
-
-def mask_missing_data(dataset_array):
-    ''' Check missing values in observation and model datasets.
-
-    If any of dataset in dataset_array has missing values at a grid point, 
-    the values at the grid point in all other datasets are masked. 
-
-    :param dataset_array: an array of OCW datasets
-    '''
-
-    mask_array = np.zeros(dataset_array[0].values.shape)
-    for dataset in dataset_array:
-        index = np.where(dataset.values.mask == True) 
-        if index[0].size >0:
-            mask_array[index] = 1
-    masked_array = []
-    for dataset in dataset_array:
-        dataset.values = ma.array(dataset.values, mask=mask_array)
-        masked_array.append(dataset)  
-    return [masked_dataset for masked_dataset in masked_array]
 
 def _rcmes_normalize_datetimes(datetimes, timestep):
     """ Normalize Dataset datetime values.
@@ -1116,3 +1055,59 @@ def _get_subregion_slice_indices(subregion, target_dataset):
         "time_end"   : timeEnd
     }
 
+def variable_unit_conversion(dataset):
+    ''' Convert water flux or temperature variables units as necessary
+
+    For water flux variables, convert full SI units water flux units to more common units.
+    For temperature, convert Celcius to Kelvin.
+
+    :param dataset: The dataset to convert.
+    :type dataset: :class:`dataset.Dataset`
+
+    :returns: A Dataset with values converted to new units.
+    :rtype: :class:`dataset.Dataset`
+    '''
+
+    water_flux_variables = ['pr', 'prec','evspsbl', 'mrro', 'swe']
+    temperature_variables = ['temp','tas','tasmax','taxmin','T']
+    variable = dataset.variable.lower()
+
+    if any(subString in variable for subString in water_flux_variables):
+        dataset_units = dataset.units.lower()
+        if variable in 'swe':
+            if any(unit in dataset_units for unit in ['m', 'meter']):
+                dataset.values = 1.e3 * dataset.values
+                dataset.units = 'km'
+        else:
+            if any(unit in dataset_units
+                for unit in ['kg m-2 s-1', 'mm s-1', 'mm/sec']):
+                dataset.values = 86400. * dataset.values
+                dataset.units = 'mm/day'
+
+    if any(subString in variable for subString in temperature_variables):
+        dataset_units = dataset.units.lower()
+        if dataset_units == 'c':
+            dataset.values = 273.15+dataset.values
+            dataset.units = 'K'
+
+    return dataset    
+
+def mask_missing_data(dataset_array):
+    ''' Check missing values in observation and model datasets.
+
+    If any of dataset in dataset_array has missing values at a grid point, 
+    the values at the grid point in all other datasets are masked. 
+
+    :param dataset_array: an array of OCW datasets
+    '''
+
+    mask_array = np.zeros(dataset_array[0].values.shape)
+    for dataset in dataset_array:
+        index = np.where(dataset.values.mask == True) 
+        if index[0].size >0:
+            mask_array[index] = 1
+    masked_array = []
+    for dataset in dataset_array:
+        dataset.values = ma.array(dataset.values, mask=mask_array)
+        masked_array.append(dataset)  
+    return [masked_dataset for masked_dataset in masked_array]

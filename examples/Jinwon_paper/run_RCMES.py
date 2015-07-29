@@ -1,0 +1,140 @@
+#Apache OCW lib immports
+import ocw.dataset_processor as dsp
+import ocw.data_source.local as local
+import ocw.utils as utils
+from ocw.dataset import Bounds
+import matplotlib.pyplot as plt
+from matplotlib import rcParams
+import numpy as np
+import numpy.ma as ma
+import yaml
+from glob import glob
+import operator
+from dateutil import parser
+from datetime import datetime
+import os
+import sys
+
+config_file = str(sys.argv[1])
+
+print 'Reading the configuration file ', config_file
+config = yaml.load(open(config_file))
+time_info = config['time']
+temporal_resolution = time_info['temporal_resolution']
+
+""" Step 1: Load the reference data """
+ref_data_info = config['datasets']['reference']
+print 'Loading observation dataset, variable:',ref_data_info['variable']
+if ref_data_info['data_source'] == 'local':
+    ref_name = ref_data_info['data_name']
+    ref_dataset = local.load_file(ref_data_info['path'],
+                                  ref_data_info['variable'], name=ref_name)
+    ref_dataset =  dsp.normalize_dataset_datetimes(ref_dataset, temporal_resolution)
+else:
+    print ' '
+    # TO DO: support RCMED and ESGF
+
+""" Step 2: Load model NetCDF Files into OCW Dataset Objects """
+model_data_info = config['datasets']['targets']
+print 'Loading model datasets, variable:',model_data_info['variable']
+if model_data_info['data_source'] == 'local':
+    model_datasets, model_names = local.load_multiple_files(model_data_info)
+else:
+    print ' '
+    # TO DO: support RCMED and ESGF
+for idata,dataset in enumerate(model_datasets):
+    model_datasets[idata] = dsp.normalize_dataset_datetimes(dataset, temporal_resolution)
+
+""" Step 3: Subset the data for temporal and spatial domain """
+if time_info['maximum_overlap_period']:
+    start_time, end_time = utils.get_temporal_overlap([ref_dataset]+model_datasets)
+else:
+    start_time = datetime.strptime(time_info['start_time'].strftime('%Y%m%d'),'%Y%m%d')
+    end_time = datetime.strptime(time_info['end_time'].strftime('%Y%m%d'),'%Y%m%d')
+
+space_info = config['space']
+min_lat = space_info['min_lat']
+max_lat = space_info['max_lat']
+min_lon = space_info['min_lon']
+max_lon = space_info['max_lon']
+# Create a Bounds object to use for subsetting
+bounds = Bounds(min_lat, max_lat, min_lon, max_lon, start_time, end_time)
+
+ref_dataset = dsp.subset(bounds,ref_dataset)
+for idata,dataset in enumerate(model_datasets):
+    model_datasets[idata] = dsp.subset(bounds,dataset)
+
+# Temporaly subset both observation and model datasets for the user specified season
+month_start = time_info['month_start']
+month_end = time_info['month_end']
+average_each_year = time_info['average_each_year']
+
+ref_dataset = dsp.temporal_subset(month_start, month_end,ref_dataset,average_each_year)
+for idata,dataset in enumerate(model_datasets):
+    model_datasets[idata] = dsp.temporal_subset(month_start, month_end,dataset,average_each_year)
+
+# generate grid points for regridding
+if config['regrid']['regrid_on_reference']:
+    new_lat = ref_dataset.lats
+    new_lon = ref_dataset.lons 
+else:
+    delta_lat = config['regrid']['regrid_dlat']
+    delta_lon = config['regrid']['regrid_dlon']
+    nlat = (max_lat - min_lat)/delta_lat+1
+    nlon = (max_lon - min_lon)/delta_lon+1
+    new_lat = np.linspace(min_lat, max_lat, nlat)
+    new_lon = np.linspace(min_lon, max_lon, nlon)
+
+# number of models
+nmodel = len(model_datasets)
+print 'Dataset loading completed'
+print 'Observation data:', ref_name 
+print 'Number of model datasets:',nmodel
+for model_name in model_names:
+    print model_name
+
+""" Step 4: Spatial regriding of the reference datasets """
+print 'Regridding datasets: ', config['regrid']
+if not config['regrid']['regrid_on_reference']:
+    ref_dataset = dsp.spatial_regrid(ref_dataset, new_lat, new_lon)
+for idata,dataset in enumerate(model_datasets):
+    model_datasets[idata] = dsp.spatial_regrid(dataset, new_lat, new_lon)
+
+print 'Propagating missing data information'
+ref_dataset = dsp.mask_missing_data([ref_dataset]+model_datasets)[0]
+model_datasets = dsp.mask_missing_data([ref_dataset]+model_datasets)[1:]
+
+""" Step 5: Checking and converting variable units """
+print 'Checking and converting variable units'
+ref_dataset = dsp.variable_unit_conversion(ref_dataset)
+for idata,dataset in enumerate(model_datasets):
+    model_datasets[idata] = dsp.variable_unit_conversion(dataset)
+    
+
+print 'Generating multi-model ensemble'
+model_datasets.append(dsp.ensemble(model_datasets))
+model_names.append('ENS-models')
+
+""" Step 6: Generate subregion average and standard deviation """
+# sort the subregion by region names and make a list
+subregions= sorted(config['subregions'].items(),key=operator.itemgetter(0))
+
+# number of subregions
+nsubregion = len(subregions)
+
+print 'Calculating spatial averages and standard deviations of ',str(nsubregion),' subregions'
+
+ref_subregion_mean, ref_subregion_std, subregion_array = utils.calc_subregion_area_mean_and_std([ref_dataset], subregions) 
+model_subregion_mean, model_subregion_std, subregion_array = utils.calc_subregion_area_mean_and_std(model_datasets, subregions) 
+
+""" Step 7: Write a netCDF file """
+print 'Writing a netcdf file: ',config['workdir']+config['output_netcdf_filename']
+dsp.write_netcdf_multiple_datasets_with_subregions(ref_dataset, ref_name, model_datasets, model_names,
+                                                   path=config['workdir']+config['output_netcdf_filename'],
+                                                   subregions=subregions, subregion_array = subregion_array, ref_subregion_mean=ref_subregion_mean, ref_subregion_std=ref_subregion_std,
+                                                   model_subregion_mean=model_subregion_mean, model_subregion_std=model_subregion_std)
+
+
+
+
+
