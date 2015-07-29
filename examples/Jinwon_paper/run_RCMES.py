@@ -15,6 +15,8 @@ from datetime import datetime
 import os
 import sys
 
+from example_package import *
+
 config_file = str(sys.argv[1])
 
 print 'Reading the configuration file ', config_file
@@ -24,7 +26,7 @@ temporal_resolution = time_info['temporal_resolution']
 
 """ Step 1: Load the reference data """
 ref_data_info = config['datasets']['reference']
-print 'Loading observation dataset, variable:',ref_data_info['variable']
+print 'Loading observation dataset:\n',ref_data_info
 if ref_data_info['data_source'] == 'local':
     ref_name = ref_data_info['data_name']
     ref_dataset = local.load_file(ref_data_info['path'],
@@ -36,7 +38,7 @@ else:
 
 """ Step 2: Load model NetCDF Files into OCW Dataset Objects """
 model_data_info = config['datasets']['targets']
-print 'Loading model datasets, variable:',model_data_info['variable']
+print 'Loading model datasets:\n',model_data_info
 if model_data_info['data_source'] == 'local':
     model_datasets, model_names = local.load_multiple_files(model_data_info)
 else:
@@ -116,25 +118,48 @@ model_datasets.append(dsp.ensemble(model_datasets))
 model_names.append('ENS-models')
 
 """ Step 6: Generate subregion average and standard deviation """
-# sort the subregion by region names and make a list
-subregions= sorted(config['subregions'].items(),key=operator.itemgetter(0))
+if config['use_subregions']:
+    # sort the subregion by region names and make a list
+    subregions= sorted(config['subregions'].items(),key=operator.itemgetter(0))
 
-# number of subregions
-nsubregion = len(subregions)
+    # number of subregions
+    nsubregion = len(subregions)
 
-print 'Calculating spatial averages and standard deviations of ',str(nsubregion),' subregions'
+    print 'Calculating spatial averages and standard deviations of ',str(nsubregion),' subregions'
 
-ref_subregion_mean, ref_subregion_std, subregion_array = utils.calc_subregion_area_mean_and_std([ref_dataset], subregions) 
-model_subregion_mean, model_subregion_std, subregion_array = utils.calc_subregion_area_mean_and_std(model_datasets, subregions) 
+    ref_subregion_mean, ref_subregion_std, subregion_array = utils.calc_subregion_area_mean_and_std([ref_dataset], subregions) 
+    model_subregion_mean, model_subregion_std, subregion_array = utils.calc_subregion_area_mean_and_std(model_datasets, subregions) 
 
 """ Step 7: Write a netCDF file """
 print 'Writing a netcdf file: ',config['workdir']+config['output_netcdf_filename']
-dsp.write_netcdf_multiple_datasets_with_subregions(ref_dataset, ref_name, model_datasets, model_names,
-                                                   path=config['workdir']+config['output_netcdf_filename'],
-                                                   subregions=subregions, subregion_array = subregion_array, ref_subregion_mean=ref_subregion_mean, ref_subregion_std=ref_subregion_std,
-                                                   model_subregion_mean=model_subregion_mean, model_subregion_std=model_subregion_std)
+if config['use_subregions']:
+    dsp.write_netcdf_multiple_datasets_with_subregions(ref_dataset, ref_name, model_datasets, model_names,
+                                                       path=config['workdir']+config['output_netcdf_filename'],
+                                                       subregions=subregions, subregion_array = subregion_array, 
+                                                       ref_subregion_mean=ref_subregion_mean, ref_subregion_std=ref_subregion_std,
+                                                       model_subregion_mean=model_subregion_mean, model_subregion_std=model_subregion_std)
+else:
+    dsp.write_netcdf_multiple_datasets_with_subregions(ref_dataset, ref_name, model_datasets, model_names,
+                                                       path=config['workdir']+config['output_netcdf_filename'])
 
+""" Step 8: Write a netCDF file """
+nmetrics = config['number_of_metrics_and_plots']
+if nmetrics > 0:
+    print 'Calculating metrics and generating plots'
+    for imetric in np.arange(nmetrics)+1:
+        metrics_name = config['metrics'+'%1d' %imetric]
+        plot_info = config['plots'+'%1d' %imetric]
+        file_name = config['workdir']+plot_info['file_name']
 
+        if metrics_name == 'Map_plot_bias_of_multiyear_climatology':
+            row, column = plot_info['subplots_array']
+            Map_plot_bias_of_multiyear_climatology(ref_dataset, ref_name, model_datasets, model_names,
+                                      file_name, row, column)
+        elif metrics_name == 'Taylor_diagram_spatial_pattern_of_multiyear_climatology':
+            Taylor_diagram_spatial_pattern_of_multiyear_climatology(ref_dataset, ref_name, model_datasets, model_names,
+                                      file_name)
+        else:
+            print 'please check the currently supported metrics'
 
 
 
