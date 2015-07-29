@@ -437,6 +437,7 @@ def variable_unit_conversion(dataset):
     '''
 
     water_flux_variables = ['pr', 'prec','evspsbl', 'mrro', 'swe']
+    temperature_variables = ['temp','tas','tasmax','taxmin','T']
     variable = dataset.variable.lower()
 
     if any(subString in variable for subString in water_flux_variables):
@@ -451,10 +452,7 @@ def variable_unit_conversion(dataset):
                 dataset.values = 86400. * dataset.values
                 dataset.units = 'mm/day'
 
-    temperature_flux_variables = ['temperature','tas','tasmax','taxmin','T']
-    variable = dataset.variable.lower()
-
-    if any(subString in variable for subString in temperature_flux_variables):
+    if any(subString in variable for subString in temperature_variables):
         dataset_units = dataset.units.lower()
         if dataset_units == 'c':
             dataset.values = 273.15+dataset.values
