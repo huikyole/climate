@@ -57,16 +57,10 @@ def decode_time_values(dataset, time_var_name):
         for time_val in time_data:
             times.append((time_base + relativedelta(months=int(time_val))).replace(day=1))
     else:
-<<<<<<< HEAD
-        for time_val in time_data:
-            arg[time_units] = time_val
-            times.append((time_base + dt.timedelta(**arg)).replace(day=1))
-=======
         try:
             times_calendar = time_data.calendar
         except:
             times_calendar = 'standard'
->>>>>>> 88d9c22e657e06be31470da69f9b3b9d8f085d6e
 
         times = num2date(time_data[:], units=time_format, calendar=times_calendar)
     return times
