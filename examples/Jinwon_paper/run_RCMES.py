@@ -142,7 +142,7 @@ else:
     dsp.write_netcdf_multiple_datasets_with_subregions(ref_dataset, ref_name, model_datasets, model_names,
                                                        path=config['workdir']+config['output_netcdf_filename'])
 
-""" Step 8: Write a netCDF file """
+""" Step 8: Calculate metrics and draw plots """
 nmetrics = config['number_of_metrics_and_plots']
 if nmetrics > 0:
     print 'Calculating metrics and generating plots'
