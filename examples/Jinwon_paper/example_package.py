@@ -84,8 +84,5 @@ def Taylor_diagram_spatial_pattern_of_multiyear_climatology(obs_dataset, obs_nam
         taylor_data[imodel,0] = ma.std(model[(model.mask==False) & (obs.mask == False)])/ma.std(obs[(model.mask==False) & (obs.mask == False)])
         taylor_data[imodel,1] = ma.corrcoef(obs_dataset.values.flatten(), model_datasets[imodel].values.flatten())[0,1]
 
-    fig = plt.figure()
-    plotter.draw_taylor_diagram(fig, 111, taylor_data, model_names, obs_name, ptitle='',legend_font_size=10,pos='best',frameon=False, ncol=1)
+    plotter.draw_taylor_diagram(taylor_data, model_names, obs_name, file_name, pos='best',frameon=False)
 
-    plt.show()
-    fig.savefig(file_name,dpi=600,bbox_inches='tight')
