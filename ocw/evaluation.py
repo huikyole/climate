@@ -311,7 +311,7 @@ class Evaluation(object):
             unary_result_shape = list((metric.run(self.target_datasets[0])).shape)
             unary_result_shape.insert(0, len(self.target_datasets))
             unary_result = ma.zeros(unary_result_shape)
-            for itarget, target in enumrate(self.target_datasets):
+            for itarget, target in enumerate(self.target_datasets):
                 unary_result[itarget,:] = metric.run(target)
             unary_results.append(unary_result)
         return unary_results
