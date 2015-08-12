@@ -2,7 +2,7 @@
 import ocw.data_source.local as local
 import ocw.plotter as plotter
 import ocw.utils as utils
-import ocw.evaluation as evaluation
+from ocw.evaluation import Evaluation
 import ocw.metrics as metrics
 
 # Python libraries
@@ -14,18 +14,22 @@ import string
 
 def Map_plot_bias_of_multiyear_climatology(obs_dataset, obs_name, model_datasets, model_names,
                                       file_name, row, column):
+    '''Draw maps of observed multi-year climatology and biases of models"'''
+
+    # calculate climatology of observation data
     obs_clim = utils.calc_temporal_mean(obs_dataset)
-    model_clim = []
-    for idata, dataset in enumerate(model_datasets):
-        model_clim.append(utils.calc_temporal_mean(dataset))
+    # determine the metrics
+    map_of_bias = metrics.TemporalMeanBias()
 
-    nmodel = len(model_names)
-    ny, nx = obs_dataset.values.shape[1:]
+    # create the Evaluation object
+    bias_evaluation = Evaluation(obs_dataset, # Reference dataset for the evaluation
+                                 model_datasets, # list of target datasets for the evaluation
+                                 [map_of_bias, map_of_bias])
 
-    rcm_bias = ma.zeros([nmodel, ny, nx])
+    # run the evaluation (bias calculation)
+    bias_evaluation.run() 
 
-    for imodel in np.arange(nmodel):
-        rcm_bias[imodel,:,:] = model_clim[imodel] - obs_clim
+    rcm_bias = bias_evaluation.results[0]
 
     fig = plt.figure()
 
@@ -50,7 +54,7 @@ def Map_plot_bias_of_multiyear_climatology(obs_dataset, obs_name, model_datasets
     cax = fig.add_axes([0.02, 1.-float(1./row), 0.01, 1./row*0.6])
     plt.colorbar(max, cax = cax) 
     clevs = plotter._nice_intervals(rcm_bias, 11)
-    for imodel in np.arange(nmodel):
+    for imodel in np.arange(len(model_datasets)):
         ax = fig.add_subplot(row, column,2+imodel)
         m = Basemap(ax=ax, projection ='cyl', llcrnrlat = lat_min, urcrnrlat = lat_max,
                 llcrnrlon = lon_min, urcrnrlon = lon_max, resolution = 'l', fix_aspect=False)
@@ -70,19 +74,24 @@ def Map_plot_bias_of_multiyear_climatology(obs_dataset, obs_name, model_datasets
 
 def Taylor_diagram_spatial_pattern_of_multiyear_climatology(obs_dataset, obs_name, model_datasets, model_names,
                                       file_name):
-    obs = utils.calc_temporal_mean(obs_dataset)
-    model_clim=[]
-    for idata, dataset in enumerate(model_datasets):
-        model_clim.append(utils.calc_temporal_mean(dataset))
+
+    # calculate climatological mean fields
+    obs_dataset.values = utils.calc_temporal_mean(obs_dataset)
+    for dataset in model_datasets:
+        dataset.values = utils.calc_temporal_mean(dataset)
 
     # Metrics (spatial standard deviation and pattern correlation)
-    nmodel = len(model_names)
-    taylor_data = np.zeros([nmodel, 2])
+    # determine the metrics
+    taylor_diagram = metrics.SpatialPatternTaylorDiagram()
 
-    for imodel in np.arange(nmodel):
-        model = model_clim[imodel]
-        taylor_data[imodel,0] = ma.std(model[(model.mask==False) & (obs.mask == False)])/ma.std(obs[(model.mask==False) & (obs.mask == False)])
-        taylor_data[imodel,1] = ma.corrcoef(obs_dataset.values.flatten(), model_datasets[imodel].values.flatten())[0,1]
+    # create the Evaluation object
+    taylor_evaluation = Evaluation(obs_dataset, # Reference dataset for the evaluation
+                                 model_datasets, # list of target datasets for the evaluation
+                                 [taylor_diagram])
 
-    plotter.draw_taylor_diagram(taylor_data, model_names, obs_name, file_name, pos='best',frameon=False)
+    # run the evaluation (bias calculation)
+    taylor_evaluation.run() 
 
+    taylor_data = taylor_evaluation.results[0]
+
+    plotter.draw_taylor_diagram(taylor_data, model_names, obs_name, file_name, pos='upper right',frameon=False)
