@@ -158,6 +158,15 @@ if nmetrics > 0:
         elif metrics_name == 'Taylor_diagram_spatial_pattern_of_multiyear_climatology':
             Taylor_diagram_spatial_pattern_of_multiyear_climatology(ref_dataset, ref_name, model_datasets, model_names,
                                       file_name)
+        elif config['use_subregions']:
+            if metrics_name == 'Timeseries_plot_subregion_interannual_variability' and average_each_year:
+                row, column = plot_info['subplots_array']
+                Time_series_subregion(ref_subregion_mean, ref_name, model_subregion_mean, model_names, False,
+                                      file_name, row, column, x_tick=['Y'+str(i+1) for i in np.arange(model_subregion_mean.shape[1])])
+            if metrics_name == 'Timeseries_plot_subregion_annual_cycle' and not average_each_year and month_start==1 and month_end==12:
+                row, column = plot_info['subplots_array']
+                Time_series_subregion(ref_subregion_mean, ref_name, model_subregion_mean, model_names, True,
+                                      file_name, row, column, x_tick=['J','F','M','A','M','J','J','A','S','O','N','D'])
         else:
             print 'please check the currently supported metrics'
 

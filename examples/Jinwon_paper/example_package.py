@@ -10,6 +10,7 @@ import numpy as np
 import numpy.ma as ma
 import matplotlib.pyplot as plt
 from mpl_toolkits.basemap import Basemap 
+from matplotlib import rcParams
 import string
 
 def Map_plot_bias_of_multiyear_climatology(obs_dataset, obs_name, model_datasets, model_names,
@@ -95,3 +96,44 @@ def Taylor_diagram_spatial_pattern_of_multiyear_climatology(obs_dataset, obs_nam
     taylor_data = taylor_evaluation.results[0]
 
     plotter.draw_taylor_diagram(taylor_data, model_names, obs_name, file_name, pos='upper right',frameon=False)
+
+def Time_series_subregion(obs_subregion_mean, obs_name, model_subregion_mean, model_names, seasonal_cycle, 
+                          file_name, row, column, x_tick=['']):
+
+    nmodel, nt, nregion = model_subregion_mean.shape  
+
+    if seasonal_cycle:
+        obs_data = ma.mean(obs_subregion_mean.reshape([1,nt/12,12,nregion]), axis=1)
+        model_data = ma.mean(model_subregion_mean.reshape([nmodel,nt/12,12,nregion]), axis=1)
+        nt = 12
+    else:
+        obs_data = obs_subregion_mean
+        model_data = model_subregion_mean
+        
+    x_axis = np.arange(nt)
+    x_tick_values = x_axis
+
+    fig = plt.figure()
+    rcParams['xtick.labelsize'] = 6
+    rcParams['ytick.labelsize'] = 6
+  
+    for iregion in np.arange(nregion):
+        ax = fig.add_subplot(row, column, iregion+1) 
+        x_tick_labels = ['']
+        if iregion+1  > column*(row-1):
+            x_tick_labels = x_tick 
+        else:
+            x_tick_labels=['']
+        ax.plot(x_axis, obs_data[0, :, iregion], color='r', lw=2, label=obs_name)
+        for imodel in np.arange(nmodel):
+            ax.plot(x_axis, model_data[imodel, :, iregion], lw=0.5, label = model_names[imodel])
+        ax.set_xlim([-0.5,nt-0.5])
+        ax.set_xticks(x_tick_values)
+        ax.set_xticklabels(x_tick_labels)
+        ax.set_title('Region %02d' % (iregion+1), fontsize=8)
+    
+    ax.legend(bbox_to_anchor=(-0.2, row/2), loc='center' , prop={'size':7}, frameon=False)  
+
+    fig.subplots_adjust(hspace=0.7, wspace=0.5)
+    plt.show()
+    fig.savefig(file_name, dpi=600, bbox_inches='tight')

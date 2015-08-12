@@ -42,10 +42,11 @@ plots1:
     file_name: narccap_tas_annual_mean_bias_to_cru
     subplots_array: !!python/tuple [4,2] 
 
-metrics2: Taylor_diagram_spatial_pattern_of_multiyear_climatology
+metrics2: Timeseries_plot_subregion_interannual_variability
 
 plots2:
-    file_name: narccap_tas_annual_mean_taylor_diagram_to_cru
+    file_name: narccap_tas_subregion_interannual_variability
+    subplots_array: !!python/tuple [7,2] 
 
 use_subregions: True 
 
