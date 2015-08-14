@@ -1,6 +1,7 @@
 #Apache OCW lib immports
 import ocw.dataset_processor as dsp
 import ocw.data_source.local as local
+import ocw.plotter as plotter
 import ocw.utils as utils
 from ocw.dataset import Bounds
 import matplotlib.pyplot as plt
@@ -132,6 +133,9 @@ if config['use_subregions']:
 
 """ Step 7: Write a netCDF file """
 print 'Writing a netcdf file: ',config['workdir']+config['output_netcdf_filename']
+if not os.path.exists(config['workdir']):
+    os.system("mkdir "+config['workdir'])
+
 if config['use_subregions']:
     dsp.write_netcdf_multiple_datasets_with_subregions(ref_dataset, ref_name, model_datasets, model_names,
                                                        path=config['workdir']+config['output_netcdf_filename'],
@@ -144,6 +148,9 @@ else:
 
 """ Step 8: Calculate metrics and draw plots """
 nmetrics = config['number_of_metrics_and_plots']
+if config['use_subregions']:
+    Map_plot_subregion(subregions, ref_dataset, config['workdir'])
+
 if nmetrics > 0:
     print 'Calculating metrics and generating plots'
     for imetric in np.arange(nmetrics)+1:
@@ -151,6 +158,7 @@ if nmetrics > 0:
         plot_info = config['plots'+'%1d' %imetric]
         file_name = config['workdir']+plot_info['file_name']
 
+        print 'metrics '+str(imetric)+'/'+str(nmetrics)+': ', metrics_name
         if metrics_name == 'Map_plot_bias_of_multiyear_climatology':
             row, column = plot_info['subplots_array']
             Map_plot_bias_of_multiyear_climatology(ref_dataset, ref_name, model_datasets, model_names,
@@ -167,8 +175,13 @@ if nmetrics > 0:
                 row, column = plot_info['subplots_array']
                 Time_series_subregion(ref_subregion_mean, ref_name, model_subregion_mean, model_names, True,
                                       file_name, row, column, x_tick=['J','F','M','A','M','J','J','A','S','O','N','D'])
+            if metrics_name == 'Portrait_diagram_subregion_interannual_variability' and average_each_year:
+                Portrait_diagram_subregion(ref_subregion_mean, ref_name, model_subregion_mean, model_names, False,
+                                      file_name)
+            if metrics_name == 'Portrait_diagram_subregion_annual_cycle' and not average_each_year and month_start==1 and month_end==12:
+                Portrait_diagram_subregion(ref_subregion_mean, ref_name, model_subregion_mean, model_names, True,
+                                      file_name)
         else:
             print 'please check the currently supported metrics'
-
 
 

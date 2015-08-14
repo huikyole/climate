@@ -1,5 +1,5 @@
-workdir: /home/huikyole/climate/examples/Jinwon_paper/
-output_netcdf_filename: narccap_prec_monthly_1980-2003.nc
+workdir: /home/huikyole/climate/examples/Jinwon_paper/narccap_prec_JJA/
+output_netcdf_filename: narccap_prec_JJA_1980-2003.nc
 
 # (RCMES will temporally subset data between month_start and month_end. If average_each_year is True (False), seasonal mean in each year is (not) calculated and used for metrics calculation.)
 time:
@@ -7,9 +7,9 @@ time:
     start_time: 1980-01-01
     end_time: 2003-12-31
     temporal_resolution: monthly
-    month_start: 1
-    month_end: 12
-    average_each_year: False
+    month_start: 6
+    month_end: 8
+    average_each_year: True  
 
 space:
     min_lat: 23.75
@@ -34,7 +34,7 @@ datasets:
         path: /share4/jinwonki/data/narccap/mon/prec*.nc                                                    
         variable: prec    
 
-number_of_metrics_and_plots: 3
+number_of_metrics_and_plots: 4
 
 metrics1: Map_plot_bias_of_multiyear_climatology
 
@@ -47,13 +47,17 @@ metrics2: Taylor_diagram_spatial_pattern_of_multiyear_climatology
 plots2:
     file_name: narccap_prec_JJA_mean_taylor_diagram_to_cru
 
-use_subregions: True 
-
-metrics3: Timeseries_plot_subregion_annual_cycle                   
+metrics3: Timeseries_plot_subregion_interannual_variability                   
 
 plots3:
-    file_name: narccap_prec_subregion_annual_cycle
-    subplots_array: !!python/tuple [5,3]
+    file_name: narccap_prec_JJA_subregion_interannual_variability
+    subplots_array: !!python/tuple [7,2]
+
+metrics4: Portrait_diagram_subregion_interannual_variability
+
+plots4:
+    file_name: narccap_prec_subregion_JJA_interannual_variability_portrait_diagram
+
 
 use_subregions: True
 
