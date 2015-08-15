@@ -1,9 +1,11 @@
 #Apache OCW lib immports
 import ocw.dataset_processor as dsp
 import ocw.data_source.local as local
+import ocw.data_source.rcmed as rcmed
 import ocw.plotter as plotter
 import ocw.utils as utils
 from ocw.dataset import Bounds
+
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
 import numpy as np
@@ -18,24 +20,44 @@ import sys
 
 from example_package import *
 
+import ssl
+if hasattr(ssl, '_create_unverified_context'):
+  ssl._create_default_https_context = ssl._create_unverified_context
+
 config_file = str(sys.argv[1])
 
 print 'Reading the configuration file ', config_file
 config = yaml.load(open(config_file))
 time_info = config['time']
 temporal_resolution = time_info['temporal_resolution']
+if time_info['maximum_overlap_period']:
+    start_time, end_time = utils.get_temporal_overlap([ref_dataset]+model_datasets)
+else:
+    start_time = datetime.strptime(time_info['start_time'].strftime('%Y%m%d'),'%Y%m%d')
+    end_time = datetime.strptime(time_info['end_time'].strftime('%Y%m%d'),'%Y%m%d')
+
+space_info = config['space']
+min_lat = space_info['min_lat']
+max_lat = space_info['max_lat']
+min_lon = space_info['min_lon']
+max_lon = space_info['max_lon']
 
 """ Step 1: Load the reference data """
 ref_data_info = config['datasets']['reference']
 print 'Loading observation dataset:\n',ref_data_info
+ref_name = ref_data_info['data_name']
 if ref_data_info['data_source'] == 'local':
-    ref_name = ref_data_info['data_name']
     ref_dataset = local.load_file(ref_data_info['path'],
                                   ref_data_info['variable'], name=ref_name)
-    ref_dataset =  dsp.normalize_dataset_datetimes(ref_dataset, temporal_resolution)
+elif ref_data_info['data_source'] == 'rcmed':
+      ref_dataset = rcmed.parameter_dataset(ref_data_info['dataset_id'],
+                                            ref_data_info['parameter_id'],
+                                            min_lat, max_lat, min_lon, max_lon,
+                                            start_time, end_time)
 else:
     print ' '
-    # TO DO: support RCMED and ESGF
+    # TO DO: support ESGF
+ref_dataset =  dsp.normalize_dataset_datetimes(ref_dataset, temporal_resolution)
 
 """ Step 2: Load model NetCDF Files into OCW Dataset Objects """
 model_data_info = config['datasets']['targets']
@@ -49,20 +71,10 @@ for idata,dataset in enumerate(model_datasets):
     model_datasets[idata] = dsp.normalize_dataset_datetimes(dataset, temporal_resolution)
 
 """ Step 3: Subset the data for temporal and spatial domain """
-if time_info['maximum_overlap_period']:
-    start_time, end_time = utils.get_temporal_overlap([ref_dataset]+model_datasets)
-else:
-    start_time = datetime.strptime(time_info['start_time'].strftime('%Y%m%d'),'%Y%m%d')
-    end_time = datetime.strptime(time_info['end_time'].strftime('%Y%m%d'),'%Y%m%d')
-
-space_info = config['space']
-min_lat = space_info['min_lat']
-max_lat = space_info['max_lat']
-min_lon = space_info['min_lon']
-max_lon = space_info['max_lon']
 # Create a Bounds object to use for subsetting
+if temporal_resolution == 'monthly' and end_time.day !=1:
+    end_time = end_time.replace(day=1)
 bounds = Bounds(min_lat, max_lat, min_lon, max_lon, start_time, end_time)
-
 ref_dataset = dsp.subset(bounds,ref_dataset)
 for idata,dataset in enumerate(model_datasets):
     model_datasets[idata] = dsp.subset(bounds,dataset)
