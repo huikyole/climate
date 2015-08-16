@@ -30,11 +30,9 @@ print 'Reading the configuration file ', config_file
 config = yaml.load(open(config_file))
 time_info = config['time']
 temporal_resolution = time_info['temporal_resolution']
-if time_info['maximum_overlap_period']:
-    start_time, end_time = utils.get_temporal_overlap([ref_dataset]+model_datasets)
-else:
-    start_time = datetime.strptime(time_info['start_time'].strftime('%Y%m%d'),'%Y%m%d')
-    end_time = datetime.strptime(time_info['end_time'].strftime('%Y%m%d'),'%Y%m%d')
+
+start_time = datetime.strptime(time_info['start_time'].strftime('%Y%m%d'),'%Y%m%d')
+end_time = datetime.strptime(time_info['end_time'].strftime('%Y%m%d'),'%Y%m%d')
 
 space_info = config['space']
 min_lat = space_info['min_lat']
@@ -57,6 +55,7 @@ elif ref_data_info['data_source'] == 'rcmed':
 else:
     print ' '
     # TO DO: support ESGF
+
 ref_dataset =  dsp.normalize_dataset_datetimes(ref_dataset, temporal_resolution)
 
 """ Step 2: Load model NetCDF Files into OCW Dataset Objects """
@@ -72,6 +71,12 @@ for idata,dataset in enumerate(model_datasets):
 
 """ Step 3: Subset the data for temporal and spatial domain """
 # Create a Bounds object to use for subsetting
+if time_info['maximum_overlap_period']:
+    start_time, end_time = utils.get_temporal_overlap([ref_dataset]+model_datasets)
+    print 'Maximum overlap period'
+    print 'start_time:', start_time
+    print 'end_time:', end_time
+
 if temporal_resolution == 'monthly' and end_time.day !=1:
     end_time = end_time.replace(day=1)
 bounds = Bounds(min_lat, max_lat, min_lon, max_lon, start_time, end_time)
