@@ -79,6 +79,11 @@ if time_info['maximum_overlap_period']:
 
 if temporal_resolution == 'monthly' and end_time.day !=1:
     end_time = end_time.replace(day=1)
+if ref_data_info['data_source'] == 'rcmed':
+    min_lat = np.max([min_lat, ref_dataset.lats.min()])
+    max_lat = np.min([max_lat, ref_dataset.lats.max()])
+    min_lon = np.max([min_lon, ref_dataset.lons.min()])
+    max_lon = np.min([max_lon, ref_dataset.lons.max()])
 bounds = Bounds(min_lat, max_lat, min_lon, max_lon, start_time, end_time)
 ref_dataset = dsp.subset(bounds,ref_dataset)
 for idata,dataset in enumerate(model_datasets):

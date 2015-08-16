@@ -1,5 +1,5 @@
-workdir: /home/huikyole/climate/examples/Jinwon_paper/cmip5_SE_Asia_prec_Jun-Sep/
-output_netcdf_filename: cmip5_SE_Asia_prec_Jun-Sep_1998-2010.nc
+workdir: /home/huikyole/climate/examples/Jinwon_paper/cmip5_SE_Asia_tas_annual/
+output_netcdf_filename: cmip5_SE_Asia_tas_annual_1981-2010.nc
 
 # (RCMES will temporally subset data between month_start and month_end. If average_each_year is True (False), seasonal mean in each year is (not) calculated and used for metrics calculation.)
 time:
@@ -7,8 +7,8 @@ time:
     start_time: 1981-01-01
     end_time: 2010-12-31
     temporal_resolution: monthly
-    month_start: 6
-    month_end: 9
+    month_start: 1
+    month_end: 12
     average_each_year: False  
 
 space:
@@ -25,27 +25,27 @@ regrid:
 datasets:
     reference:
         data_source: rcmed
-        data_name: TRMM
-        dataset_id: 3
-        parameter_id: 36
+        data_name: CRU  
+        dataset_id: 10
+        parameter_id: 38
 
     targets:
         data_source: local
-        path: /home/huikyole/data/apcc-datasets-2014/model_present/pr*.nc                                   
-        variable: pr    
+        path: /home/huikyole/data/apcc-datasets-2014/model_present/tas_Amon*.nc                                   
+        variable: tas   
 
 number_of_metrics_and_plots: 2
 
 metrics1: Map_plot_bias_of_multiyear_climatology
 
 plots1:
-    file_name: cmip5_SE_ASIA_prec_Jun-Sep_mean_bias_to_TRMM
+    file_name: cmip5_SE_ASIA_tas_annual_mean_bias_to_cru 
     subplots_array: !!python/tuple [3,2]
 
 metrics2: Taylor_diagram_spatial_pattern_of_multiyear_climatology
 
 plots2:
-    file_name: cmip5_SE_ASIA_prec_Jun-Sep_taylor_diagram_to_TRMM
+    file_name: cmip5_SE_ASIA_tas_annual_taylor_diagram_to_cru  
 
 use_subregions: False
 
