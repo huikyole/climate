@@ -154,31 +154,34 @@ if config['use_subregions']:
     model_subregion_mean, model_subregion_std, subregion_array = utils.calc_subregion_area_mean_and_std(model_datasets, subregions) 
 
 """ Step 7: Write a netCDF file """
-print 'Writing a netcdf file: ',config['workdir']+config['output_netcdf_filename']
-if not os.path.exists(config['workdir']):
-    os.system("mkdir "+config['workdir'])
+workdir = config['workdir']
+if workdir[-1] != '/':
+    workdir = workdir+'/'
+print 'Writing a netcdf file: ',workdir+config['output_netcdf_filename']
+if not os.path.exists(workdir):
+    os.system("mkdir "+workdir)
 
 if config['use_subregions']:
     dsp.write_netcdf_multiple_datasets_with_subregions(ref_dataset, ref_name, model_datasets, model_names,
-                                                       path=config['workdir']+config['output_netcdf_filename'],
+                                                       path=workdir+config['output_netcdf_filename'],
                                                        subregions=subregions, subregion_array = subregion_array, 
                                                        ref_subregion_mean=ref_subregion_mean, ref_subregion_std=ref_subregion_std,
                                                        model_subregion_mean=model_subregion_mean, model_subregion_std=model_subregion_std)
 else:
     dsp.write_netcdf_multiple_datasets_with_subregions(ref_dataset, ref_name, model_datasets, model_names,
-                                                       path=config['workdir']+config['output_netcdf_filename'])
+                                                       path=workdir+config['output_netcdf_filename'])
 
 """ Step 8: Calculate metrics and draw plots """
 nmetrics = config['number_of_metrics_and_plots']
 if config['use_subregions']:
-    Map_plot_subregion(subregions, ref_dataset, config['workdir'])
+    Map_plot_subregion(subregions, ref_dataset, workdir)
 
 if nmetrics > 0:
     print 'Calculating metrics and generating plots'
     for imetric in np.arange(nmetrics)+1:
         metrics_name = config['metrics'+'%1d' %imetric]
         plot_info = config['plots'+'%1d' %imetric]
-        file_name = config['workdir']+plot_info['file_name']
+        file_name = workdir+plot_info['file_name']
 
         print 'metrics '+str(imetric)+'/'+str(nmetrics)+': ', metrics_name
         if metrics_name == 'Map_plot_bias_of_multiyear_climatology':
