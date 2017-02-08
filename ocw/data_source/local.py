@@ -168,11 +168,13 @@ def load_WRF_2d_files(file_path=None,
             times.append(
                 datetime(*time_struct_parsed[:6]) + timedelta(hours=ihour))
         values0 = file_object.variables[variable_name][:]
+        if isinstance(values0, numpy.ndarray):
+           values0 = ma.array(values0, mask=numpy.zeros(values0.shape))
         if ifile == 0:
             values = values0
             variable_unit = file_object.variables[variable_name].units
         else:
-            values = numpy.concatenate((values, values0))
+            values = ma.concatenate((values, values0))
         file_object.close()
     times = numpy.array(times)
     return Dataset(lats, lons, times, values, variable_name, units=variable_unit, name=name)
@@ -407,19 +409,22 @@ def load_WRF_2d_files_RAIN(file_path=None,
         for ihour in range(24):
             times.append(
                 datetime(*time_struct_parsed[:6]) + timedelta(hours=ihour))
+        temp_value = file_object.variables['RAINC'][:]+file_object.variables['RAINNC'][:]
+        if isinstance(temp_value, numpy.ndarray):
+           temp_value = ma.array(temp_value, mask=numpy.zeros(temp_value.shape))
         if ifile == 0:
-            values0 = file_object.variables['RAINC'][
-                :] + file_object.variables['RAINNC'][:]
+            values0 = file_object.variables['RAINC'][:]+file_object.variables['RAINNC'][:]
         else:
-            values0 = numpy.concatenate((values0, file_object.variables['RAINC'][
-                                        :] + file_object.variables['RAINNC'][:]))
+            values0 = ma.concatenate((values0, temp_value))
         file_object.close()
     times = numpy.array(times)
     years = numpy.array([d.year for d in times])
     ncycle = numpy.unique(years).size
     print('ncycle=', ncycle)
     nt, ny, nx = values0.shape
+    print values0.shape
     values = numpy.zeros([nt - ncycle * 24, ny, nx])
+    values = ma.array(values, mask=numpy.zeros(values.shape))
     times2 = []
     nt2 = nt / ncycle
     # remove the first day in each year
@@ -653,3 +658,92 @@ def load_GPM_IMERG_files(file_path=None,
         file_object.close()
     times = numpy.array(times)
     return Dataset(lats, lons, times, values, variable_name, units=variable_unit, name=name)
+
+def load_GPM_IMERG_files_with_spatial_filter(file_path=None,
+                         filename_pattern=None,
+                         filelist=None,
+                         variable_name='precipitationCal',
+                         user_mask_file=None, 
+                         mask_variable_name='mask',
+                         user_mask_values=[10],
+                         longitude_name='lon',
+                         latitude_name='lat'):
+    ''' Load multiple GPM Level 3 IMEGE files containing calibrated \
+        precipitation and generate a two-dimensional array \
+        for the masked grid points.
+
+    :param file_path: Directory to the HDF files to load.
+    :type file_path: :mod:`string`
+
+    :param filename_pattern: Path to the HDF files to load.
+    :type filename_pattern: :mod:`string`
+
+    :param filelist: A list of filenames
+    :type filelist: :mod:`string`
+
+    :param variable_name: The variable name to load from the HDF file.
+    :type variable_name: :mod:`string`
+
+    :param name: (Optional) A name for the loaded dataset.
+    :type name: :mod:`string`
+
+    :user_mask_file: user's own gridded mask file(a netCDF file name)
+    :type name: :mod:`string`
+
+    :mask_variable_name: mask variables in user_mask_file    
+    :type name: :mod:`string`
+
+    :longitude_name: longitude variable in user_mask_file    
+    :type name: :mod:`string`
+
+    :latitude_name: latitude variable in user_mask_file    
+    :type name: :mod:`string`
+
+    :param user_mask_values: grid points where mask_variable == user_mask_value will be extracted.
+    :type user_mask_values: list of strings
+
+    :returns: A two-dimensional array with the requested variable's MASKED data from \
+        the HDF file.
+    :rtype: :class:`dataset.Dataset`
+
+    :raises ValueError:
+    '''
+
+    if not filelist:
+        GPM_files = []
+        for pattern in filename_pattern:
+            GPM_files.extend(glob(file_path + pattern))
+    else:
+        GPM_files = [line.rstrip('\n') for line in open(filelist)]
+
+    GPM_files.sort()
+
+    file_object_first = h5py.File(GPM_files[0])
+    lats = file_object_first['Grid']['lat'][:]
+    lons = file_object_first['Grid']['lon'][:]
+
+    lons, lats = numpy.meshgrid(lons, lats)
+
+    nfile = len(GPM_files)
+    for ifile, file in enumerate(GPM_files):
+        if ifile == 0 and user_mask_file:
+            file_object = netCDF4.Dataset(user_mask_file)
+            mask_variable = file_object.variables[mask_variable_name][:]
+            mask_longitude = file_object.variables[longitude_name][:]
+            mask_latitude = file_object.variables[latitude_name][:]
+            spatial_mask = utils.regrid_spatial_mask(lons,lats,
+                                                     mask_longitude, mask_latitude, mask_variable,
+                                                     user_mask_values)
+            y_index, x_index = numpy.where(spatial_mask == 0)
+        print('Reading file ' + str(ifile + 1) + '/' + str(nfile), file)
+        file_object = h5py.File(file)
+        values0 = ma.transpose(ma.masked_less(
+            file_object['Grid'][variable_name][:], 0.))
+        values_masked = values0[y_index, x_index]
+        values_masked = ma.expand_dims(values_masked, axis=0)
+        if ifile == 0:
+            values = values_masked
+        else:
+            values = ma.concatenate((values, values_masked))
+        file_object.close()
+    return values
